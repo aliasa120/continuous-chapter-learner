@@ -31,14 +31,14 @@ const LanguageSelector: React.FC<LanguageSelectorProps> = ({ language, setLangua
   ];
 
   return (
-    <div className="space-y-2">
-      <label htmlFor="language-select" className="block text-sm font-medium text-gray-700">
+    <div className="space-y-1">
+      <label className="block text-sm font-medium mb-1">
         Transcribe to Language
       </label>
       <div className="relative">
-        <Globe className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+        <Globe className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-indigo-300" />
         <Select value={language} onValueChange={setLanguage}>
-          <SelectTrigger id="language-select" className="w-full pl-10">
+          <SelectTrigger id="language-select" className="w-full pl-10 bg-indigo-700/30 border-indigo-400/30 text-white">
             <SelectValue placeholder="Select language" />
           </SelectTrigger>
           <SelectContent>
