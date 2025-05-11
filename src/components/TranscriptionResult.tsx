@@ -44,8 +44,8 @@ const TranscriptionResult: React.FC<TranscriptionResultProps> = ({
         <div className="flex justify-center items-center h-full">
           <div className="text-center">
             <div className="w-16 h-16 mx-auto border-4 rounded-full border-l-green-600 border-r-green-300 border-b-green-600 border-t-green-300 animate-spin mb-4"></div>
-            <p className="text-gray-700 animate-pulse">Transcribing your content...</p>
-            <p className="text-sm text-gray-500 mt-2">This may take a minute</p>
+            <p className="text-gray-800 animate-pulse">Transcribing your content...</p>
+            <p className="text-sm text-gray-600 mt-2">This may take a minute</p>
           </div>
         </div>
       </div>
@@ -55,7 +55,7 @@ const TranscriptionResult: React.FC<TranscriptionResultProps> = ({
   if (transcriptionLines.length === 0) {
     return (
       <div className="p-6 h-96 flex items-center justify-center text-center">
-        <div className="text-gray-500">
+        <div className="text-gray-600">
           <p className="mb-2 text-sm">Your transcription will appear here</p>
           <p className="text-xs">Upload a file and click "Start Transcription" to begin</p>
         </div>
@@ -65,12 +65,12 @@ const TranscriptionResult: React.FC<TranscriptionResultProps> = ({
 
   return (
     <div className="flex flex-col h-96">
-      <div className="flex justify-between items-center px-6 py-2 border-b border-green-100 bg-green-50">
+      <div className="flex justify-between items-center px-6 py-2 border-b">
         <div className="flex items-center">
           <Button
-            variant="ghost"
+            variant="outline"
             size="sm"
-            className="text-xs flex items-center gap-1 mr-2 text-green-700 hover:bg-green-100 hover:text-green-800"
+            className="text-xs flex items-center gap-1 mr-2 text-green-700 hover:bg-green-50"
             onClick={onPlayPause}
           >
             {isPlaying ? (
@@ -83,9 +83,9 @@ const TranscriptionResult: React.FC<TranscriptionResultProps> = ({
         </div>
         
         <Button
-          variant="ghost"
+          variant="outline"
           size="sm"
-          className="text-xs flex items-center gap-1 text-green-700 hover:bg-green-100 hover:text-green-800"
+          className="text-xs flex items-center gap-1 text-green-700 hover:bg-green-50"
           onClick={copyToClipboard}
         >
           {copied ? (
@@ -113,7 +113,7 @@ const TranscriptionResult: React.FC<TranscriptionResultProps> = ({
               <div 
                 key={index}
                 className={`rounded-lg border p-3 transition-all ${
-                  isActive ? 'bg-green-50 border-green-300 shadow-md' : 'bg-white border-gray-100 hover:border-green-200'
+                  isActive ? 'border-green-500 shadow-md' : 'border-gray-200 hover:border-green-300'
                 }`}
                 onClick={() => seekToTimestamp(line.startTime)}
               >
@@ -121,18 +121,14 @@ const TranscriptionResult: React.FC<TranscriptionResultProps> = ({
                   <div className="w-20 flex-shrink-0 text-sm font-mono text-green-700">
                     {line.timestamp}
                   </div>
-                  <p className="text-gray-700 flex-1">
-                    {isActive ? (
-                      <span className="font-medium text-green-800">{line.text}</span>
-                    ) : (
-                      line.text
-                    )}
+                  <p className={`text-gray-900 flex-1 ${isActive ? 'font-medium' : ''}`}>
+                    {line.text}
                   </p>
                   <div className="ml-2">
                     <Button 
-                      variant="ghost" 
+                      variant="outline" 
                       size="sm" 
-                      className={`h-6 w-6 p-0 rounded-full ${isActive ? 'bg-green-100 text-green-700' : 'hover:bg-green-50 text-gray-400 hover:text-green-600'}`}
+                      className={`h-6 w-6 p-0 rounded-full ${isActive ? 'text-green-700 border-green-500' : 'hover:text-green-700 text-gray-500'}`}
                       onClick={(e) => {
                         e.stopPropagation();
                         seekToTimestamp(line.startTime);
