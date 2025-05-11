@@ -1,16 +1,21 @@
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import FileUpload from '../components/FileUpload';
 import LanguageSelector from '../components/LanguageSelector';
 import TranscriptionResult from '../components/TranscriptionResult';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
+import type { TranscriptionLine } from '../pages/TranscribePage';
 
 const Index = () => {
   const [file, setFile] = useState<File | null>(null);
   const [language, setLanguage] = useState("english");
-  const [transcription, setTranscription] = useState("");
+  const [transcriptionLines, setTranscriptionLines] = useState<TranscriptionLine[]>([]);
   const [isTranscribing, setIsTranscribing] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
   const { toast } = useToast();
 
   const handleTranscribe = async () => {
@@ -24,15 +29,19 @@ const Index = () => {
     }
 
     setIsTranscribing(true);
+    setTranscriptionLines([]);
     
     // In a real app, this would connect to a transcription API
     // Simulating a delay for demonstration purposes
     setTimeout(() => {
-      setTranscription(
-        `This is a simulated transcription of the ${file.name} file in ${language}. 
-        In a real application, this text would be the result of processing your audio 
-        or video through a transcription service API.`
-      );
+      // Generate mock transcription with timestamps
+      const mockTranscription: TranscriptionLine[] = [
+        { timestamp: "00:00:02", text: "This is a simulated transcription of the file.", startTime: 2 },
+        { timestamp: "00:00:08", text: `In a real application, this would use Groq Whisper v3 for ${file.name} in ${language}.`, startTime: 8 },
+        { timestamp: "00:00:15", text: "You would need to provide an API key to access the transcription service.", startTime: 15 },
+      ];
+      
+      setTranscriptionLines(mockTranscription);
       setIsTranscribing(false);
       
       toast({
@@ -44,7 +53,68 @@ const Index = () => {
 
   const handleClear = () => {
     setFile(null);
-    setTranscription("");
+    setTranscriptionLines([]);
+  };
+
+  const handleTimeUpdate = () => {
+    const media = audioRef.current || videoRef.current;
+    if (media) {
+      setCurrentTime(media.currentTime);
+    }
+  };
+
+  const handlePlayPause = () => {
+    const media = audioRef.current || videoRef.current;
+    if (media) {
+      if (isPlaying) {
+        media.pause();
+      } else {
+        media.play();
+      }
+      setIsPlaying(!isPlaying);
+    }
+  };
+
+  const seekToTimestamp = (seconds: number) => {
+    const media = audioRef.current || videoRef.current;
+    if (media) {
+      media.currentTime = seconds;
+      if (!isPlaying) {
+        media.play();
+        setIsPlaying(true);
+      }
+    }
+  };
+
+  // Render media element based on file type
+  const renderMediaElement = () => {
+    if (!file) return null;
+
+    const url = URL.createObjectURL(file);
+    
+    if (file.type.startsWith('audio/')) {
+      return (
+        <audio 
+          ref={audioRef} 
+          src={url} 
+          className="hidden" 
+          onTimeUpdate={handleTimeUpdate}
+          onEnded={() => setIsPlaying(false)}
+        />
+      );
+    } else if (file.type.startsWith('video/')) {
+      return (
+        <video 
+          ref={videoRef} 
+          src={url} 
+          className="hidden" 
+          onTimeUpdate={handleTimeUpdate}
+          onEnded={() => setIsPlaying(false)}
+        />
+      );
+    }
+    
+    return null;
   };
 
   return (
@@ -91,7 +161,14 @@ const Index = () => {
             
             <div>
               <h2 className="text-2xl font-semibold text-gray-800 mb-4">Transcription Result</h2>
-              <TranscriptionResult transcription={transcription} isTranscribing={isTranscribing} />
+              <TranscriptionResult 
+                transcriptionLines={transcriptionLines}
+                isTranscribing={isTranscribing}
+                currentTime={currentTime}
+                seekToTimestamp={seekToTimestamp}
+                isPlaying={isPlaying}
+                onPlayPause={handlePlayPause}
+              />
             </div>
           </div>
           
@@ -102,6 +179,8 @@ const Index = () => {
             </div>
           </div>
         </div>
+        
+        {renderMediaElement()}
         
         {/* Features */}
         <div className="mt-20 grid md:grid-cols-3 gap-8 text-center">
