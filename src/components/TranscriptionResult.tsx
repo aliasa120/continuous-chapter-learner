@@ -43,7 +43,7 @@ const TranscriptionResult: React.FC<TranscriptionResultProps> = ({
       <div className="p-6 h-96">
         <div className="flex justify-center items-center h-full">
           <div className="text-center">
-            <div className="w-16 h-16 mx-auto border-4 rounded-full border-l-indigo-600 border-r-indigo-300 border-b-indigo-600 border-t-indigo-300 animate-spin mb-4"></div>
+            <div className="w-16 h-16 mx-auto border-4 rounded-full border-l-green-600 border-r-green-300 border-b-green-600 border-t-green-300 animate-spin mb-4"></div>
             <p className="text-gray-700 animate-pulse">Transcribing your content...</p>
             <p className="text-sm text-gray-500 mt-2">This may take a minute</p>
           </div>
@@ -65,12 +65,12 @@ const TranscriptionResult: React.FC<TranscriptionResultProps> = ({
 
   return (
     <div className="flex flex-col h-96">
-      <div className="flex justify-between items-center px-6 py-2 border-b border-gray-100">
+      <div className="flex justify-between items-center px-6 py-2 border-b border-green-100 bg-green-50">
         <div className="flex items-center">
           <Button
             variant="ghost"
             size="sm"
-            className="text-xs flex items-center gap-1 mr-2"
+            className="text-xs flex items-center gap-1 mr-2 text-green-700 hover:bg-green-100 hover:text-green-800"
             onClick={onPlayPause}
           >
             {isPlaying ? (
@@ -85,7 +85,7 @@ const TranscriptionResult: React.FC<TranscriptionResultProps> = ({
         <Button
           variant="ghost"
           size="sm"
-          className="text-xs flex items-center gap-1"
+          className="text-xs flex items-center gap-1 text-green-700 hover:bg-green-100 hover:text-green-800"
           onClick={copyToClipboard}
         >
           {copied ? (
@@ -113,17 +113,17 @@ const TranscriptionResult: React.FC<TranscriptionResultProps> = ({
               <div 
                 key={index}
                 className={`rounded-lg border p-3 transition-all ${
-                  isActive ? 'bg-indigo-50 border-indigo-300' : 'bg-white border-gray-100 hover:border-gray-200'
+                  isActive ? 'bg-green-50 border-green-300 shadow-md' : 'bg-white border-gray-100 hover:border-green-200'
                 }`}
                 onClick={() => seekToTimestamp(line.startTime)}
               >
                 <div className="flex">
-                  <div className="w-20 flex-shrink-0 text-sm font-mono text-indigo-600">
+                  <div className="w-20 flex-shrink-0 text-sm font-mono text-green-700">
                     {line.timestamp}
                   </div>
                   <p className="text-gray-700 flex-1">
                     {isActive ? (
-                      <span className="font-medium text-indigo-700">{line.text}</span>
+                      <span className="font-medium text-green-800">{line.text}</span>
                     ) : (
                       line.text
                     )}
@@ -132,7 +132,7 @@ const TranscriptionResult: React.FC<TranscriptionResultProps> = ({
                     <Button 
                       variant="ghost" 
                       size="sm" 
-                      className="h-6 w-6 p-0"
+                      className={`h-6 w-6 p-0 rounded-full ${isActive ? 'bg-green-100 text-green-700' : 'hover:bg-green-50 text-gray-400 hover:text-green-600'}`}
                       onClick={(e) => {
                         e.stopPropagation();
                         seekToTimestamp(line.startTime);

@@ -5,7 +5,7 @@ import FileUpload from '../components/FileUpload';
 import LanguageSelector from '../components/LanguageSelector';
 import TranscriptionResult from '../components/TranscriptionResult';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Wand2 } from 'lucide-react';
+import { ArrowLeft, Wand2, Sparkles } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 
 export interface TranscriptionLine {
@@ -129,16 +129,16 @@ const TranscribePage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 py-12">
+    <div className="min-h-screen bg-gradient-to-br from-green-50 to-white py-12">
       <div className="container mx-auto px-4">
         <div className="mb-8">
-          <Link to="/" className="inline-flex items-center text-indigo-600 hover:text-indigo-800 transition-colors">
+          <Link to="/" className="inline-flex items-center text-green-600 hover:text-green-800 transition-colors">
             <ArrowLeft className="h-4 w-4 mr-1" />
             Back to home
           </Link>
         </div>
 
-        <h1 className="text-3xl md:text-4xl font-bold mb-8 text-center bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+        <h1 className="text-3xl md:text-4xl font-bold mb-8 text-center bg-gradient-to-r from-green-600 to-emerald-500 bg-clip-text text-transparent">
           Transcribe Your Content
         </h1>
 
@@ -146,18 +146,22 @@ const TranscribePage = () => {
           {/* Horizontal cards layout */}
           <div className="flex flex-col lg:flex-row gap-6">
             {/* Transcription Wizard Card */}
-            <div className="w-full lg:w-1/2 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl shadow-lg text-white p-6">
-              <h2 className="text-xl font-bold mb-4 flex items-center">
-                <Wand2 className="mr-2 h-5 w-5" /> 
-                Transcription Wizard
-              </h2>
-              <p className="mb-6 text-indigo-100">
+            <div className="w-full lg:w-1/2 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl shadow-lg text-white p-6 transform transition-all hover:-translate-y-1 hover:shadow-xl">
+              <div className="flex items-center mb-4">
+                <div className="bg-white/20 p-2 rounded-lg mr-3">
+                  <Wand2 className="h-5 w-5 text-white" /> 
+                </div>
+                <h2 className="text-xl font-bold flex items-center">
+                  Transcription Wizard
+                </h2>
+              </div>
+              <p className="mb-6 text-green-50">
                 Upload your audio or video file, select a language, and let our AI do the magic.
               </p>
               
               <div className="space-y-6">
                 <div>
-                  <label className="block text-sm font-medium text-indigo-100 mb-1">
+                  <label className="block text-sm font-medium text-green-50 mb-1">
                     Upload File
                   </label>
                   <FileUpload file={file} setFile={setFile} />
@@ -168,17 +172,27 @@ const TranscribePage = () => {
                 <Button 
                   onClick={handleTranscribe} 
                   disabled={!file || isTranscribing}
-                  className="w-full bg-white text-indigo-600 hover:bg-indigo-50"
+                  className="w-full bg-white text-green-700 hover:bg-green-50"
                 >
-                  {isTranscribing ? "Transcribing..." : "Start Transcription"}
+                  {isTranscribing ? 
+                    <span className="flex items-center">
+                      <div className="w-4 h-4 border-2 border-t-transparent border-green-700 rounded-full animate-spin mr-2"></div>
+                      Transcribing...
+                    </span> : 
+                    <span className="flex items-center">
+                      <Sparkles className="mr-2 h-4 w-4" />
+                      Start Transcription
+                    </span>
+                  }
                 </Button>
               </div>
             </div>
             
             {/* Transcription Results Card */}
-            <div className="w-full lg:w-1/2 bg-white rounded-xl shadow-lg">
-              <div className="p-6 border-b border-gray-100">
-                <h2 className="text-xl font-bold text-gray-800">
+            <div className="w-full lg:w-1/2 bg-white rounded-xl shadow-lg border border-green-100 transform transition-all hover:shadow-xl">
+              <div className="p-6 border-b border-green-100 bg-green-50">
+                <h2 className="text-xl font-bold text-green-800 flex items-center">
+                  <Sparkles className="mr-2 h-5 w-5 text-green-600" />
                   Transcription Results
                 </h2>
               </div>
@@ -194,7 +208,7 @@ const TranscribePage = () => {
             </div>
           </div>
           
-          <div className="mt-6 text-center text-sm text-gray-500">
+          <div className="mt-6 text-center text-sm text-gray-500 bg-green-50 p-4 rounded-lg border border-green-100">
             Supports MP3, WAV, MP4, or MOV files up to 100MB
           </div>
         </div>

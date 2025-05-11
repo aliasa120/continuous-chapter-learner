@@ -33,9 +33,9 @@ const FileUpload: React.FC<FileUploadProps> = ({ file, setFile }) => {
     if (!file) return null;
     
     if (file.type.startsWith('audio/')) {
-      return <FileAudio className="h-10 w-10 text-indigo-500" />;
+      return <FileAudio className="h-10 w-10 text-green-500" />;
     } else {
-      return <FileVideo className="h-10 w-10 text-purple-500" />;
+      return <FileVideo className="h-10 w-10 text-green-600" />;
     }
   };
 
@@ -46,12 +46,12 @@ const FileUpload: React.FC<FileUploadProps> = ({ file, setFile }) => {
           {...getRootProps()}
           className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-all duration-200 ${
             isDragActive
-              ? 'border-indigo-500 bg-indigo-50'
-              : 'border-gray-300 hover:border-indigo-400 hover:bg-gray-50'
+              ? 'border-green-500 bg-green-50'
+              : 'border-green-200 hover:border-green-400 hover:bg-green-50'
           }`}
         >
           <input {...getInputProps()} />
-          <Upload className="h-10 w-10 mx-auto text-gray-400" />
+          <Upload className="h-10 w-10 mx-auto text-green-500" />
           <p className="mt-2 text-sm font-medium text-gray-600">
             {isDragActive
               ? "Drop your file here..."
@@ -63,7 +63,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ file, setFile }) => {
           </p>
         </div>
       ) : (
-        <div className="border rounded-lg p-4">
+        <div className="border border-green-200 rounded-lg p-4 bg-green-50">
           <div className="flex items-center">
             {getFileIcon()}
             <div className="ml-3 flex-1 truncate">
@@ -75,7 +75,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ file, setFile }) => {
             <button
               type="button"
               onClick={removeFile}
-              className="p-1 rounded-full text-gray-400 hover:text-gray-500 hover:bg-gray-100"
+              className="p-1 rounded-full text-gray-400 hover:text-gray-500 hover:bg-green-100"
             >
               <X className="h-5 w-5" />
             </button>
