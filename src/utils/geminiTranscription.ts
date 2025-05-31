@@ -22,19 +22,59 @@ export const transcribeWithGemini = async ({ file, language, apiKey }: Transcrip
     // Convert file to base64
     const fileData = await fileToBase64(file);
     
-    const prompt = `Please transcribe this audio/video file to text in ${language}. 
-    Format your response as follows:
-    - Include timestamps in format [MM:SS] or [HH:MM:SS]
-    - If multiple speakers are detected, identify them as Speaker 1, Speaker 2, etc.
-    - Separate each line with the timestamp followed by the text
-    - Be as accurate as possible with timing
+    // Create language-specific prompt
+    const getLanguagePrompt = (lang: string) => {
+      const languageNames: { [key: string]: string } = {
+        'en': 'English',
+        'es': 'Spanish',
+        'fr': 'French',
+        'de': 'German',
+        'it': 'Italian',
+        'pt': 'Portuguese',
+        'ru': 'Russian',
+        'ja': 'Japanese',
+        'ko': 'Korean',
+        'zh': 'Chinese',
+        'ar': 'Arabic',
+        'hi': 'Hindi',
+        'bn': 'Bengali',
+        'ur': 'Urdu',
+        'ta': 'Tamil',
+        'te': 'Telugu',
+        'mr': 'Marathi',
+        'gu': 'Gujarati',
+        'kn': 'Kannada',
+        'ml': 'Malayalam',
+        'pa': 'Punjabi',
+        'or': 'Odia',
+        'as': 'Assamese',
+        // Add more language mappings as needed
+      };
+      
+      return languageNames[lang] || 'English';
+    };
 
-    Example format:
+    const targetLanguage = getLanguagePrompt(language);
+    
+    const prompt = `Please transcribe and translate this audio/video file to ${targetLanguage}. 
+    
+    IMPORTANT INSTRUCTIONS:
+    1. If the audio is in a different language, TRANSLATE the content to ${targetLanguage}
+    2. Include accurate timestamps in format [MM:SS] or [HH:MM:SS]
+    3. If multiple speakers are detected, identify them as Speaker 1, Speaker 2, etc.
+    4. Provide the output in ${targetLanguage} language only
+    5. Separate each line with timestamp followed by speaker (if any) and translated text
+    
+    Format your response exactly like this:
     [00:02] Speaker 1: Hello and welcome to this presentation
     [00:08] Speaker 2: Thank you for having me here today
-    [00:14] Speaker 1: Let's begin with the introduction`;
+    [00:14] Speaker 1: Let's begin with the introduction
+    
+    Make sure all text is translated to ${targetLanguage} and timestamps are accurate.`;
 
-    const result = await model.generateContentStream([
+    console.log('Sending transcription request to Gemini with language:', targetLanguage);
+
+    const result = await model.generateContent([
       {
         text: prompt
       },
@@ -46,11 +86,10 @@ export const transcribeWithGemini = async ({ file, language, apiKey }: Transcrip
       }
     ]);
 
-    let transcriptionText = '';
-    for await (const chunk of result.stream) {
-      const chunkText = chunk.text();
-      transcriptionText += chunkText;
-    }
+    const response = await result.response;
+    const transcriptionText = response.text();
+    
+    console.log('Received transcription response:', transcriptionText);
 
     return parseTranscription(transcriptionText);
   } catch (error) {
