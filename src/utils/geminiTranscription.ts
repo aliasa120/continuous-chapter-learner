@@ -16,13 +16,15 @@ export interface TranscriptionOptions {
 
 export const transcribeWithGemini = async ({ file, language, apiKey }: TranscriptionOptions): Promise<TranscriptionLine[]> => {
   try {
+    console.log('Starting transcription with language:', language, 'API Key provided:', !!apiKey);
+    
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-lite" });
 
     // Convert file to base64
     const fileData = await fileToBase64(file);
     
-    // Create language-specific prompt
+    // Create comprehensive language mapping
     const getLanguagePrompt = (lang: string) => {
       const languageNames: { [key: string]: string } = {
         'en': 'English',
@@ -48,31 +50,91 @@ export const transcribeWithGemini = async ({ file, language, apiKey }: Transcrip
         'pa': 'Punjabi',
         'or': 'Odia',
         'as': 'Assamese',
-        // Add more language mappings as needed
+        'sd': 'Sindhi', // Added Sindhi
+        'si': 'Sinhala',
+        'my': 'Myanmar (Burmese)',
+        'th': 'Thai',
+        'vi': 'Vietnamese',
+        'id': 'Indonesian',
+        'ms': 'Malay',
+        'tl': 'Tagalog',
+        'sw': 'Swahili',
+        'am': 'Amharic',
+        'ha': 'Hausa',
+        'yo': 'Yoruba',
+        'ig': 'Igbo',
+        'zu': 'Zulu',
+        'af': 'Afrikaans',
+        'nl': 'Dutch',
+        'sv': 'Swedish',
+        'da': 'Danish',
+        'no': 'Norwegian',
+        'fi': 'Finnish',
+        'et': 'Estonian',
+        'lv': 'Latvian',
+        'lt': 'Lithuanian',
+        'pl': 'Polish',
+        'cs': 'Czech',
+        'sk': 'Slovak',
+        'hu': 'Hungarian',
+        'ro': 'Romanian',
+        'bg': 'Bulgarian',
+        'hr': 'Croatian',
+        'sr': 'Serbian',
+        'bs': 'Bosnian',
+        'mk': 'Macedonian',
+        'sq': 'Albanian',
+        'el': 'Greek',
+        'tr': 'Turkish',
+        'az': 'Azerbaijani',
+        'ka': 'Georgian',
+        'hy': 'Armenian',
+        'he': 'Hebrew',
+        'fa': 'Persian',
+        'ku': 'Kurdish',
+        'ps': 'Pashto',
+        'uz': 'Uzbek',
+        'kk': 'Kazakh',
+        'ky': 'Kyrgyz',
+        'tg': 'Tajik',
+        'mn': 'Mongolian',
+        'ne': 'Nepali',
+        'si': 'Sinhala',
+        'my': 'Myanmar',
+        'km': 'Khmer',
+        'lo': 'Lao',
+        'ka': 'Georgian'
       };
       
       return languageNames[lang] || 'English';
     };
 
     const targetLanguage = getLanguagePrompt(language);
+    console.log('Target language for transcription:', targetLanguage);
     
-    const prompt = `Please transcribe and translate this audio/video file to ${targetLanguage}. 
-    
-    IMPORTANT INSTRUCTIONS:
-    1. If the audio is in a different language, TRANSLATE the content to ${targetLanguage}
-    2. Include accurate timestamps in format [MM:SS] or [HH:MM:SS]
-    3. If multiple speakers are detected, identify them as Speaker 1, Speaker 2, etc.
-    4. Provide the output in ${targetLanguage} language only
-    5. Separate each line with timestamp followed by speaker (if any) and translated text
-    
-    Format your response exactly like this:
-    [00:02] Speaker 1: Hello and welcome to this presentation
-    [00:08] Speaker 2: Thank you for having me here today
-    [00:14] Speaker 1: Let's begin with the introduction
-    
-    Make sure all text is translated to ${targetLanguage} and timestamps are accurate.`;
+    const prompt = `You are an expert audio/video transcription and translation AI. Your task is to:
 
-    console.log('Sending transcription request to Gemini with language:', targetLanguage);
+1. TRANSCRIBE the audio/video content accurately
+2. TRANSLATE everything to ${targetLanguage} language
+3. IDENTIFY different speakers if present
+4. PROVIDE accurate timestamps
+
+CRITICAL INSTRUCTIONS:
+- If the original audio is in ANY language (Hindi, English, Urdu, etc.), you MUST translate ALL content to ${targetLanguage}
+- Even if some words are already in ${targetLanguage}, translate the entire content for consistency
+- Include timestamps in format [MM:SS] or [HH:MM:SS]
+- If multiple speakers are detected, label them as "Speaker 1", "Speaker 2", etc.
+- Output ONLY in ${targetLanguage} language
+- Be accurate with timestamps and speaker identification
+
+Format your response EXACTLY like this:
+[00:02] Speaker 1: [Translation in ${targetLanguage}]
+[00:08] Speaker 2: [Translation in ${targetLanguage}]
+[00:14] Speaker 1: [Translation in ${targetLanguage}]
+
+IMPORTANT: ALL text must be in ${targetLanguage}, regardless of the original language.`;
+
+    console.log('Sending transcription request to Gemini...');
 
     const result = await model.generateContent([
       {
@@ -91,9 +153,15 @@ export const transcribeWithGemini = async ({ file, language, apiKey }: Transcrip
     
     console.log('Received transcription response:', transcriptionText);
 
-    return parseTranscription(transcriptionText);
+    const parsedLines = parseTranscription(transcriptionText);
+    console.log('Parsed transcription lines:', parsedLines.length);
+    
+    return parsedLines;
   } catch (error) {
     console.error('Transcription error:', error);
+    if (error instanceof Error && error.message.includes('API_KEY')) {
+      throw new Error('Invalid API key. Please check your Google Gemini API key and try again.');
+    }
     throw new Error('Failed to transcribe audio. Please check your API key and try again.');
   }
 };
@@ -102,7 +170,9 @@ const parseTranscription = (text: string): TranscriptionLine[] => {
   const lines = text.split('\n').filter(line => line.trim());
   const transcriptionLines: TranscriptionLine[] = [];
 
-  lines.forEach(line => {
+  lines.forEach((line, index) => {
+    console.log(`Parsing line ${index}:`, line);
+    
     // Match patterns like [00:02] Speaker 1: text or [00:02] text
     const timeMatch = line.match(/\[(\d{1,2}:\d{2}(?::\d{2})?)\]/);
     if (timeMatch) {
@@ -122,12 +192,15 @@ const parseTranscription = (text: string): TranscriptionLine[] => {
       }
 
       if (text.trim()) {
-        transcriptionLines.push({
+        const transcriptionLine = {
           timestamp: formatTimestamp(timeStr),
           text: text.trim(),
           startTime: parseTimeToSeconds(timeStr),
           speaker
-        });
+        };
+        
+        console.log('Parsed line:', transcriptionLine);
+        transcriptionLines.push(transcriptionLine);
       }
     }
   });

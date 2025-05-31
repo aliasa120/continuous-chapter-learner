@@ -1,5 +1,5 @@
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import FileUpload from '../components/FileUpload';
 import LanguageSelector from '../components/LanguageSelector';
@@ -20,7 +20,17 @@ const TranscribePage = () => {
   const [currentTime, setCurrentTime] = useState(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const mediaUrlRef = useRef<string | null>(null);
   const { toast } = useToast();
+
+  // Clean up media URL when component unmounts or file changes
+  useEffect(() => {
+    return () => {
+      if (mediaUrlRef.current) {
+        URL.revokeObjectURL(mediaUrlRef.current);
+      }
+    };
+  }, [file]);
 
   const handleTranscribe = async () => {
     if (!file) {
@@ -45,12 +55,15 @@ const TranscribePage = () => {
     setTranscriptionLines([]);
     
     try {
+      console.log('Starting transcription with file:', file.name, 'language:', language);
+      
       const results = await transcribeWithGemini({
         file,
         language,
         apiKey: apiKey.trim()
       });
       
+      console.log('Transcription completed, results:', results);
       setTranscriptionLines(results);
       
       toast({
@@ -81,10 +94,15 @@ const TranscribePage = () => {
     if (media) {
       if (isPlaying) {
         media.pause();
-        setIsPlaying(false);
       } else {
-        media.play();
-        setIsPlaying(true);
+        media.play().catch(error => {
+          console.error('Error playing media:', error);
+          toast({
+            title: "Playback error",
+            description: "Unable to play the media file.",
+            variant: "destructive",
+          });
+        });
       }
     }
   };
@@ -94,40 +112,104 @@ const TranscribePage = () => {
     if (media) {
       media.currentTime = seconds;
       if (!isPlaying) {
-        media.play();
-        setIsPlaying(true);
+        media.play().catch(error => {
+          console.error('Error playing media:', error);
+          toast({
+            title: "Playback error",
+            description: "Unable to play the media file.",
+            variant: "destructive",
+          });
+        });
       }
     }
   };
 
-  // Determine if we need to render audio or video element
-  const renderMediaElement = () => {
-    if (!file) return null;
+  // Create and manage media element
+  useEffect(() => {
+    if (file) {
+      // Clean up previous URL
+      if (mediaUrlRef.current) {
+        URL.revokeObjectURL(mediaUrlRef.current);
+      }
+      
+      // Create new URL
+      mediaUrlRef.current = URL.createObjectURL(file);
+      
+      // Reset media refs
+      if (audioRef.current) {
+        audioRef.current.src = '';
+        audioRef.current = null;
+      }
+      if (videoRef.current) {
+        videoRef.current.src = '';
+        videoRef.current = null;
+      }
+      
+      setIsPlaying(false);
+      setCurrentTime(0);
+    }
+  }, [file]);
 
-    const url = URL.createObjectURL(file);
-    
+  // Render media element
+  const renderMediaElement = () => {
+    if (!file || !mediaUrlRef.current) return null;
+
+    const handleLoadedData = () => {
+      console.log('Media loaded successfully');
+    };
+
+    const handleError = (e: any) => {
+      console.error('Media error:', e);
+      toast({
+        title: "Media load error",
+        description: "Unable to load the media file for playback.",
+        variant: "destructive",
+      });
+    };
+
+    const handlePlay = () => {
+      console.log('Media started playing');
+      setIsPlaying(true);
+    };
+
+    const handlePause = () => {
+      console.log('Media paused');
+      setIsPlaying(false);
+    };
+
+    const handleEnded = () => {
+      console.log('Media ended');
+      setIsPlaying(false);
+    };
+
     if (file.type.startsWith('audio/')) {
       return (
         <audio 
           ref={audioRef} 
-          src={url} 
+          src={mediaUrlRef.current} 
           className="hidden" 
           onTimeUpdate={handleTimeUpdate}
-          onEnded={() => setIsPlaying(false)}
-          onPlay={() => setIsPlaying(true)}
-          onPause={() => setIsPlaying(false)}
+          onLoadedData={handleLoadedData}
+          onError={handleError}
+          onPlay={handlePlay}
+          onPause={handlePause}
+          onEnded={handleEnded}
+          preload="metadata"
         />
       );
     } else if (file.type.startsWith('video/')) {
       return (
         <video 
           ref={videoRef} 
-          src={url} 
+          src={mediaUrlRef.current} 
           className="hidden" 
           onTimeUpdate={handleTimeUpdate}
-          onEnded={() => setIsPlaying(false)}
-          onPlay={() => setIsPlaying(true)}
-          onPause={() => setIsPlaying(false)}
+          onLoadedData={handleLoadedData}
+          onError={handleError}
+          onPlay={handlePlay}
+          onPause={handlePause}
+          onEnded={handleEnded}
+          preload="metadata"
         />
       );
     }
@@ -146,7 +228,7 @@ const TranscribePage = () => {
         </div>
 
         <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-6 sm:mb-8 text-center bg-gradient-to-r from-green-600 to-emerald-500 bg-clip-text text-transparent">
-          Transcribe Your Content
+          AI-Powered Transcription & Translation
         </h1>
 
         <div className="max-w-6xl mx-auto">
@@ -159,11 +241,11 @@ const TranscribePage = () => {
                   <Wand2 className="h-4 w-4 sm:h-5 sm:w-5 text-white" /> 
                 </div>
                 <h2 className="text-lg sm:text-xl font-bold">
-                  Transcription Wizard
+                  Transcription & Translation Wizard
                 </h2>
               </div>
               <p className="mb-4 sm:mb-6 text-green-50 text-sm sm:text-base">
-                Upload your audio or video file, configure settings, and let our AI transcribe with speaker identification.
+                Upload your audio or video file, select target language, and let AI transcribe with speaker identification and real-time translation.
               </p>
               
               <div className="space-y-4 sm:space-y-6">
@@ -186,11 +268,11 @@ const TranscribePage = () => {
                   {isTranscribing ? 
                     <span className="flex items-center text-sm sm:text-base">
                       <div className="w-4 h-4 border-2 border-t-transparent border-green-700 rounded-full animate-spin mr-2"></div>
-                      Transcribing...
+                      Transcribing & Translating...
                     </span> : 
                     <span className="flex items-center text-sm sm:text-base">
                       <Sparkles className="mr-2 h-4 w-4" />
-                      Start Transcription
+                      Start AI Transcription
                     </span>
                   }
                 </Button>
@@ -202,7 +284,7 @@ const TranscribePage = () => {
               <div className="p-4 sm:p-6 border-b border-green-100 bg-green-50">
                 <h2 className="text-lg sm:text-xl font-bold text-green-800 flex items-center">
                   <Sparkles className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
-                  Transcription Results
+                  Transcription & Translation Results
                 </h2>
               </div>
               
@@ -218,7 +300,7 @@ const TranscribePage = () => {
           </div>
           
           <div className="mt-4 sm:mt-6 text-center text-xs sm:text-sm text-gray-500 bg-green-50 p-3 sm:p-4 rounded-lg border border-green-100">
-            Supports MP3, WAV, MP4, MOV files up to 100MB • Powered by Google Gemini Flash 2.0 Lite
+            Supports MP3, WAV, MP4, MOV files up to 100MB • Powered by Google Gemini Flash 2.0 Lite • Real-time Translation & Speaker Diarization
           </div>
         </div>
       </div>
