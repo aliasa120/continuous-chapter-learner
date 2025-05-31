@@ -3,14 +3,17 @@ import React, { useState, useRef } from 'react';
 import FileUpload from '../components/FileUpload';
 import LanguageSelector from '../components/LanguageSelector';
 import TranscriptionResult from '../components/TranscriptionResult';
+import ApiKeyInput from '../components/ApiKeyInput';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 import { FileAudio, Sparkles, Wand2 } from 'lucide-react';
+import { transcribeWithGemini, parseTranscriptionToLines } from '../utils/geminiTranscription';
 import type { TranscriptionLine } from '../pages/TranscribePage';
 
 const Index = () => {
   const [file, setFile] = useState<File | null>(null);
-  const [language, setLanguage] = useState("english");
+  const [language, setLanguage] = useState("en");
+  const [apiKey, setApiKey] = useState("AIzaSyDcvqkBlNTX1mhT6y7e-BK6Ix-AdCbR95A");
   const [transcriptionLines, setTranscriptionLines] = useState<TranscriptionLine[]>([]);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -29,27 +32,42 @@ const Index = () => {
       return;
     }
 
+    if (!apiKey.trim()) {
+      toast({
+        title: "API Key required",
+        description: "Please enter your Google Gemini API key.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsTranscribing(true);
     setTranscriptionLines([]);
     
-    // In a real app, this would connect to a transcription API
-    // Simulating a delay for demonstration purposes
-    setTimeout(() => {
-      // Generate mock transcription with timestamps
-      const mockTranscription: TranscriptionLine[] = [
-        { timestamp: "00:00:02", text: "This is a simulated transcription of the file.", startTime: 2 },
-        { timestamp: "00:00:08", text: `In a real application, this would use Groq Whisper v3 for ${file.name} in ${language}.`, startTime: 8 },
-        { timestamp: "00:00:15", text: "You would need to provide an API key to access the transcription service.", startTime: 15 },
-      ];
+    try {
+      const transcriptionText = await transcribeWithGemini({
+        file,
+        language,
+        apiKey: apiKey.trim()
+      });
       
-      setTranscriptionLines(mockTranscription);
-      setIsTranscribing(false);
+      const lines = parseTranscriptionToLines(transcriptionText);
+      setTranscriptionLines(lines);
       
       toast({
         title: "Transcription complete!",
         description: "Your transcription has been generated successfully.",
       });
-    }, 2000);
+    } catch (error) {
+      console.error('Transcription error:', error);
+      toast({
+        title: "Transcription failed",
+        description: "There was an error processing your file. Please check your API key and try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsTranscribing(false);
+    }
   };
 
   const handleClear = () => {
@@ -120,45 +138,57 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-white">
-      <div className="container mx-auto px-4 py-12">
-        {/* Hero Section */}
-        <div className="text-center mb-16">
-          <h1 className="text-4xl md:text-6xl font-bold mb-4 bg-gradient-to-r from-green-600 to-emerald-500 bg-clip-text text-transparent">
+      <div className="container mx-auto px-3 sm:px-4 py-6 sm:py-12">
+        {/* Hero Section - Mobile Optimized */}
+        <div className="text-center mb-8 sm:mb-16">
+          <h1 className="text-3xl sm:text-4xl md:text-6xl font-bold mb-3 sm:mb-4 bg-gradient-to-r from-green-600 to-emerald-500 bg-clip-text text-transparent leading-tight">
             Audio & Video Transcriber
           </h1>
-          <p className="text-lg md:text-xl text-gray-600 max-w-2xl mx-auto">
-            Convert your audio and video files to text with just a few clicks. Fast, accurate, and available in multiple languages.
+          <p className="text-base sm:text-lg md:text-xl text-gray-600 max-w-2xl mx-auto px-2">
+            Convert your audio and video files to text with Google Gemini AI. Fast, accurate, and available in 80+ languages.
           </p>
         </div>
         
-        {/* Main Content */}
-        <div className="max-w-4xl mx-auto">
-          <div className="grid md:grid-cols-2 gap-6">
-            <div className="bg-white rounded-2xl shadow-lg overflow-hidden border border-green-100 transform transition-all hover:shadow-xl hover:-translate-y-1">
-              <div className="bg-gradient-to-r from-green-500 to-emerald-500 py-4 px-6">
-                <h2 className="text-2xl font-semibold text-white flex items-center">
-                  <Wand2 className="mr-2 h-5 w-5" />
+        {/* Main Content - Mobile First Design */}
+        <div className="max-w-6xl mx-auto">
+          <div className="flex flex-col lg:grid lg:grid-cols-2 gap-4 sm:gap-6">
+            {/* Upload Card */}
+            <div className="bg-white rounded-xl sm:rounded-2xl shadow-lg overflow-hidden border border-green-100 order-1">
+              <div className="bg-gradient-to-r from-green-500 to-emerald-500 py-3 sm:py-4 px-4 sm:px-6">
+                <h2 className="text-lg sm:text-2xl font-semibold text-white flex items-center">
+                  <Wand2 className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
                   Upload Media
                 </h2>
               </div>
-              <div className="p-6 space-y-6">
+              <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
                 <FileUpload file={file} setFile={setFile} />
                 <LanguageSelector language={language} setLanguage={setLanguage} />
+                <ApiKeyInput apiKey={apiKey} setApiKey={setApiKey} />
                 
-                <div className="flex space-x-3">
+                <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3">
                   <Button 
                     onClick={handleTranscribe} 
-                    disabled={!file || isTranscribing}
-                    className="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:from-green-600 hover:to-emerald-700 shadow-md hover:shadow-lg transition-all"
+                    disabled={!file || isTranscribing || !apiKey.trim()}
+                    className="w-full sm:flex-1 bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:from-green-600 hover:to-emerald-700 shadow-md hover:shadow-lg transition-all h-11 sm:h-10"
                   >
-                    {isTranscribing ? "Transcribing..." : "Transcribe Now"}
+                    {isTranscribing ? (
+                      <span className="flex items-center justify-center">
+                        <div className="w-4 h-4 border-2 border-t-transparent border-white rounded-full animate-spin mr-2"></div>
+                        Transcribing...
+                      </span>
+                    ) : (
+                      <span className="flex items-center justify-center">
+                        <Sparkles className="mr-2 h-4 w-4" />
+                        Transcribe Now
+                      </span>
+                    )}
                   </Button>
                   
                   {file && (
                     <Button 
                       variant="outline" 
                       onClick={handleClear}
-                      className="flex-shrink-0 border-green-200 hover:bg-green-50 text-green-700"
+                      className="w-full sm:w-auto border-green-200 hover:bg-green-50 text-green-700 h-11 sm:h-10"
                     >
                       Clear
                     </Button>
@@ -167,10 +197,11 @@ const Index = () => {
               </div>
             </div>
             
-            <div className="bg-white rounded-2xl shadow-lg overflow-hidden border border-green-100 transform transition-all hover:shadow-xl">
-              <div className="bg-gradient-to-r from-green-500 to-emerald-500 py-4 px-6">
-                <h2 className="text-2xl font-semibold text-white flex items-center">
-                  <FileAudio className="mr-2 h-5 w-5" />
+            {/* Results Card */}
+            <div className="bg-white rounded-xl sm:rounded-2xl shadow-lg overflow-hidden border border-green-100 order-2">
+              <div className="bg-gradient-to-r from-green-500 to-emerald-500 py-3 sm:py-4 px-4 sm:px-6">
+                <h2 className="text-lg sm:text-2xl font-semibold text-white flex items-center">
+                  <FileAudio className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
                   Transcription Result
                 </h2>
               </div>
@@ -185,44 +216,45 @@ const Index = () => {
             </div>
           </div>
           
-          <div className="bg-green-50 p-6 rounded-xl mt-6 border border-green-100 shadow-sm">
-            <div className="flex flex-col md:flex-row items-center justify-between text-sm text-gray-600">
+          {/* Info Card - Mobile Optimized */}
+          <div className="bg-green-50 p-4 sm:p-6 rounded-xl mt-4 sm:mt-6 border border-green-100 shadow-sm">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between text-sm text-gray-600 space-y-2 sm:space-y-0">
               <p>Upload MP3, WAV, MP4, or MOV files up to 100MB</p>
-              <p className="mt-2 md:mt-0">Transcription speed may vary based on file length</p>
+              <p className="text-xs sm:text-sm">Powered by Google Gemini AI</p>
             </div>
           </div>
         </div>
         
         {renderMediaElement()}
         
-        {/* Features */}
-        <div className="mt-20 grid md:grid-cols-3 gap-8">
-          <div className="bg-white p-8 rounded-2xl shadow-lg border border-green-100 transform transition-all hover:-translate-y-2 hover:shadow-xl">
-            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-              <Sparkles className="h-8 w-8 text-green-600" />
+        {/* Features - Mobile Optimized */}
+        <div className="mt-12 sm:mt-20 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
+          <div className="bg-white p-6 sm:p-8 rounded-xl sm:rounded-2xl shadow-lg border border-green-100 transform transition-all hover:-translate-y-1 hover:shadow-xl">
+            <div className="w-12 h-12 sm:w-16 sm:h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4 sm:mb-6">
+              <Sparkles className="h-6 w-6 sm:h-8 sm:w-8 text-green-600" />
             </div>
-            <h3 className="text-xl font-semibold mb-3 text-center text-green-800">Fast Processing</h3>
-            <p className="text-gray-600 text-center">Get your transcriptions in minutes, not hours. Our system is optimized for speed and accuracy.</p>
+            <h3 className="text-lg sm:text-xl font-semibold mb-2 sm:mb-3 text-center text-gray-900">AI-Powered</h3>
+            <p className="text-gray-600 text-center text-sm sm:text-base">Advanced Google Gemini AI for accurate speech recognition and transcription.</p>
           </div>
           
-          <div className="bg-white p-8 rounded-2xl shadow-lg border border-green-100 transform transition-all hover:-translate-y-2 hover:shadow-xl">
-            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <div className="bg-white p-6 sm:p-8 rounded-xl sm:rounded-2xl shadow-lg border border-green-100 transform transition-all hover:-translate-y-1 hover:shadow-xl">
+            <div className="w-12 h-12 sm:w-16 sm:h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4 sm:mb-6">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 sm:h-8 sm:w-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
               </svg>
             </div>
-            <h3 className="text-xl font-semibold mb-3 text-center text-green-800">Multiple Languages</h3>
-            <p className="text-gray-600 text-center">Support for various languages so you can transcribe content from around the world.</p>
+            <h3 className="text-lg sm:text-xl font-semibold mb-2 sm:mb-3 text-center text-gray-900">80+ Languages</h3>
+            <p className="text-gray-600 text-center text-sm sm:text-base">Support for over 80 languages to transcribe content from around the world.</p>
           </div>
           
-          <div className="bg-white p-8 rounded-2xl shadow-lg border border-green-100 transform transition-all hover:-translate-y-2 hover:shadow-xl">
-            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+          <div className="bg-white p-6 sm:p-8 rounded-xl sm:rounded-2xl shadow-lg border border-green-100 transform transition-all hover:-translate-y-1 hover:shadow-xl sm:col-span-2 lg:col-span-1">
+            <div className="w-12 h-12 sm:w-16 sm:h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4 sm:mb-6">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 sm:h-8 sm:w-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
               </svg>
             </div>
-            <h3 className="text-xl font-semibold mb-3 text-center text-green-800">Secure & Private</h3>
-            <p className="text-gray-600 text-center">Your files are encrypted and automatically deleted after processing for your privacy.</p>
+            <h3 className="text-lg sm:text-xl font-semibold mb-2 sm:mb-3 text-center text-gray-900">Mobile Optimized</h3>
+            <p className="text-gray-600 text-center text-sm sm:text-base">Designed for mobile devices with responsive interface and touch-friendly controls.</p>
           </div>
         </div>
       </div>
