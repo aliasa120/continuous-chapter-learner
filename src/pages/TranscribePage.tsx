@@ -3,21 +3,20 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import FileUpload from '../components/FileUpload';
 import LanguageSelector from '../components/LanguageSelector';
-import ApiKeyInput from '../components/ApiKeyInput';
 import TranscriptionResult from '../components/TranscriptionResult';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Wand2, Sparkles } from 'lucide-react';
+import { ArrowLeft, Wand2, Sparkles, Zap } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { transcribeWithGemini, type TranscriptionLine } from '../utils/geminiTranscription';
 
 const TranscribePage = () => {
   const [file, setFile] = useState<File | null>(null);
   const [language, setLanguage] = useState("en");
-  const [apiKey, setApiKey] = useState<string>("");
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [transcriptionLines, setTranscriptionLines] = useState<TranscriptionLine[]>([]);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const mediaUrlRef = useRef<string | null>(null);
@@ -42,36 +41,26 @@ const TranscribePage = () => {
       return;
     }
 
-    if (!apiKey.trim()) {
-      toast({
-        title: "API Key required",
-        description: "Please enter your Google Gemini API key.",
-        variant: "destructive",
-      });
-      return;
-    }
-
     setIsTranscribing(true);
     setTranscriptionLines([]);
     
     try {
-      console.log('Starting transcription with file:', file.name, 'language:', language);
+      console.log('Starting enhanced transcription with file:', file.name, 'language:', language);
       
       const results = await transcribeWithGemini({
         file,
-        language,
-        apiKey: apiKey.trim()
+        language
       });
       
-      console.log('Transcription completed, results:', results);
+      console.log('Enhanced transcription completed, results:', results);
       setTranscriptionLines(results);
       
       toast({
-        title: "Transcription complete!",
-        description: `Successfully transcribed ${results.length} segments with speaker identification.`,
+        title: "Enhanced Transcription Complete!",
+        description: `Successfully transcribed ${results.length} segments with speaker identification and confidence scoring.`,
       });
     } catch (error) {
-      console.error('Transcription failed:', error);
+      console.error('Enhanced transcription failed:', error);
       toast({
         title: "Transcription failed",
         description: error instanceof Error ? error.message : "An unexpected error occurred.",
@@ -86,6 +75,14 @@ const TranscribePage = () => {
     const media = audioRef.current || videoRef.current;
     if (media) {
       setCurrentTime(media.currentTime);
+    }
+  };
+
+  const handleLoadedMetadata = () => {
+    const media = audioRef.current || videoRef.current;
+    if (media) {
+      setDuration(media.duration);
+      console.log('Media duration loaded:', media.duration);
     }
   };
 
@@ -111,6 +108,7 @@ const TranscribePage = () => {
     const media = audioRef.current || videoRef.current;
     if (media) {
       media.currentTime = seconds;
+      console.log('Seeking to:', seconds, 'seconds');
       if (!isPlaying) {
         media.play().catch(error => {
           console.error('Error playing media:', error);
@@ -147,10 +145,11 @@ const TranscribePage = () => {
       
       setIsPlaying(false);
       setCurrentTime(0);
+      setDuration(0);
     }
   }, [file]);
 
-  // Render media element
+  // Render media element with enhanced features
   const renderMediaElement = () => {
     if (!file || !mediaUrlRef.current) return null;
 
@@ -182,34 +181,32 @@ const TranscribePage = () => {
       setIsPlaying(false);
     };
 
+    const commonProps = {
+      src: mediaUrlRef.current,
+      onTimeUpdate: handleTimeUpdate,
+      onLoadedData: handleLoadedData,
+      onLoadedMetadata: handleLoadedMetadata,
+      onError: handleError,
+      onPlay: handlePlay,
+      onPause: handlePause,
+      onEnded: handleEnded,
+      preload: "metadata" as const
+    };
+
     if (file.type.startsWith('audio/')) {
       return (
         <audio 
           ref={audioRef} 
-          src={mediaUrlRef.current} 
           className="hidden" 
-          onTimeUpdate={handleTimeUpdate}
-          onLoadedData={handleLoadedData}
-          onError={handleError}
-          onPlay={handlePlay}
-          onPause={handlePause}
-          onEnded={handleEnded}
-          preload="metadata"
+          {...commonProps}
         />
       );
     } else if (file.type.startsWith('video/')) {
       return (
         <video 
           ref={videoRef} 
-          src={mediaUrlRef.current} 
           className="hidden" 
-          onTimeUpdate={handleTimeUpdate}
-          onLoadedData={handleLoadedData}
-          onError={handleError}
-          onPlay={handlePlay}
-          onPause={handlePause}
-          onEnded={handleEnded}
-          preload="metadata"
+          {...commonProps}
         />
       );
     }
@@ -228,64 +225,71 @@ const TranscribePage = () => {
         </div>
 
         <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-6 sm:mb-8 text-center bg-gradient-to-r from-green-600 to-emerald-500 bg-clip-text text-transparent">
-          AI-Powered Transcription & Translation
+          AI-Powered Enhanced Transcription & Translation
         </h1>
 
         <div className="max-w-6xl mx-auto">
-          {/* Responsive layout - stack on mobile, side by side on desktop */}
+          {/* Enhanced layout with new features */}
           <div className="flex flex-col lg:flex-row gap-4 sm:gap-6">
-            {/* Transcription Wizard Card */}
+            {/* Enhanced Transcription Wizard Card */}
             <div className="w-full lg:w-1/2 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl shadow-lg text-white p-4 sm:p-6 transform transition-all hover:-translate-y-1 hover:shadow-xl">
               <div className="flex items-center mb-4">
                 <div className="bg-white/20 p-2 rounded-lg mr-3">
-                  <Wand2 className="h-4 w-4 sm:h-5 sm:w-5 text-white" /> 
+                  <Zap className="h-4 w-4 sm:h-5 sm:w-5 text-white" /> 
                 </div>
                 <h2 className="text-lg sm:text-xl font-bold">
-                  Transcription & Translation Wizard
+                  Enhanced AI Transcription Engine
                 </h2>
               </div>
+              <div className="bg-white/10 rounded-lg p-3 mb-4">
+                <p className="text-xs text-green-100 mb-2">🚀 Powered by Gemini 2.5 Flash Preview</p>
+                <p className="text-xs text-green-100">✨ Enhanced Features: Speaker Diarization • Confidence Scoring • Precise Timing • Multi-language Support</p>
+              </div>
               <p className="mb-4 sm:mb-6 text-green-50 text-sm sm:text-base">
-                Upload your audio or video file, select target language, and let AI transcribe with speaker identification and real-time translation.
+                Advanced AI transcription with real-time translation, speaker identification, and enhanced synchronization capabilities.
               </p>
               
               <div className="space-y-4 sm:space-y-6">
                 <div>
                   <label className="block text-sm font-medium text-green-50 mb-1">
-                    Upload File
+                    Upload Media File
                   </label>
                   <FileUpload file={file} setFile={setFile} />
                 </div>
                 
                 <LanguageSelector language={language} setLanguage={setLanguage} />
                 
-                <ApiKeyInput apiKey={apiKey} setApiKey={setApiKey} />
-                
                 <Button 
                   onClick={handleTranscribe} 
-                  disabled={!file || !apiKey.trim() || isTranscribing}
+                  disabled={!file || isTranscribing}
                   className="w-full bg-white text-green-700 hover:bg-green-50 h-10 sm:h-11"
                 >
                   {isTranscribing ? 
                     <span className="flex items-center text-sm sm:text-base">
                       <div className="w-4 h-4 border-2 border-t-transparent border-green-700 rounded-full animate-spin mr-2"></div>
-                      Transcribing & Translating...
+                      Enhanced AI Processing...
                     </span> : 
                     <span className="flex items-center text-sm sm:text-base">
                       <Sparkles className="mr-2 h-4 w-4" />
-                      Start AI Transcription
+                      Start Enhanced Transcription
                     </span>
                   }
                 </Button>
               </div>
             </div>
             
-            {/* Transcription Results Card */}
+            {/* Enhanced Results Card */}
             <div className="w-full lg:w-1/2 bg-white rounded-xl shadow-lg border border-green-100 transform transition-all hover:shadow-xl">
               <div className="p-4 sm:p-6 border-b border-green-100 bg-green-50">
                 <h2 className="text-lg sm:text-xl font-bold text-green-800 flex items-center">
                   <Sparkles className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
-                  Transcription & Translation Results
+                  Enhanced Results with Confidence Scoring
                 </h2>
+                {duration > 0 && (
+                  <p className="text-sm text-green-600 mt-1">
+                    Media Duration: {Math.floor(duration / 60)}:{String(Math.floor(duration % 60)).padStart(2, '0')}
+                  </p>
+                )}
               </div>
               
               <TranscriptionResult
@@ -300,7 +304,7 @@ const TranscribePage = () => {
           </div>
           
           <div className="mt-4 sm:mt-6 text-center text-xs sm:text-sm text-gray-500 bg-green-50 p-3 sm:p-4 rounded-lg border border-green-100">
-            Supports MP3, WAV, MP4, MOV files up to 100MB • Powered by Google Gemini Flash 2.0 Lite • Real-time Translation & Speaker Diarization
+            🎯 Enhanced with Gemini 2.5 Flash • Speaker Diarization • Confidence Scoring • Precise Synchronization • 100+ Languages Supported
           </div>
         </div>
       </div>
