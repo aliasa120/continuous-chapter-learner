@@ -50,7 +50,7 @@ export const transcribeWithGemini = async ({ file, language, apiKey }: Transcrip
         'pa': 'Punjabi',
         'or': 'Odia',
         'as': 'Assamese',
-        'sd': 'Sindhi', // Added Sindhi
+        'sd': 'Sindhi',
         'si': 'Sinhala',
         'my': 'Myanmar (Burmese)',
         'th': 'Thai',
@@ -99,11 +99,8 @@ export const transcribeWithGemini = async ({ file, language, apiKey }: Transcrip
         'tg': 'Tajik',
         'mn': 'Mongolian',
         'ne': 'Nepali',
-        'si': 'Sinhala',
-        'my': 'Myanmar',
         'km': 'Khmer',
-        'lo': 'Lao',
-        'ka': 'Georgian'
+        'lo': 'Lao'
       };
       
       return languageNames[lang] || 'English';
