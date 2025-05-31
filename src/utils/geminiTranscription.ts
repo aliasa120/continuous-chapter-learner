@@ -1,5 +1,5 @@
 
-import { GoogleGenAI } from '@google/genai';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
 export interface TranscriptionOptions {
   file: File;
@@ -8,47 +8,30 @@ export interface TranscriptionOptions {
 }
 
 export const transcribeWithGemini = async ({ file, language, apiKey }: TranscriptionOptions): Promise<string> => {
-  const ai = new GoogleGenAI({
-    apiKey: apiKey,
-  });
-
-  const config = {
-    responseMimeType: 'text/plain',
-  };
-
-  const model = 'gemini-2.0-flash-lite';
+  const genAI = new GoogleGenerativeAI(apiKey);
+  const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-lite" });
 
   // Convert file to base64
   const fileData = await fileToBase64(file);
   
-  const contents = [
-    {
-      role: 'user',
-      parts: [
-        {
-          text: `Please transcribe this audio/video file to text in ${language}. Provide timestamps in the format [HH:MM:SS] followed by the spoken text.`,
-        },
-        {
-          inlineData: {
-            mimeType: file.type,
-            data: fileData
-          }
-        }
-      ],
-    },
-  ];
+  const prompt = `Please transcribe this audio/video file to text in ${language}. Provide timestamps in the format [HH:MM:SS] followed by the spoken text.`;
 
-  const response = await ai.models.generateContentStream({
-    model,
-    config,
-    contents,
-  });
+  const result = await model.generateContentStream([
+    {
+      text: prompt
+    },
+    {
+      inlineData: {
+        mimeType: file.type,
+        data: fileData
+      }
+    }
+  ]);
 
   let transcriptionText = '';
-  for await (const chunk of response) {
-    if (chunk.text) {
-      transcriptionText += chunk.text;
-    }
+  for await (const chunk of result.stream) {
+    const chunkText = chunk.text();
+    transcriptionText += chunkText;
   }
 
   return transcriptionText;
