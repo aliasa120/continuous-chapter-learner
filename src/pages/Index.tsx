@@ -1,4 +1,3 @@
-
 import React, { useState, useRef } from 'react';
 import FileUpload from '../components/FileUpload';
 import LanguageSelector from '../components/LanguageSelector';
@@ -7,8 +6,7 @@ import ApiKeyInput from '../components/ApiKeyInput';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 import { FileAudio, Sparkles, Wand2 } from 'lucide-react';
-import { transcribeWithGemini, parseTranscriptionToLines } from '../utils/geminiTranscription';
-import type { TranscriptionLine } from '../pages/TranscribePage';
+import { transcribeWithGemini, type TranscriptionLine } from '../utils/geminiTranscription';
 
 const Index = () => {
   const [file, setFile] = useState<File | null>(null);
@@ -45,13 +43,12 @@ const Index = () => {
     setTranscriptionLines([]);
     
     try {
-      const transcriptionText = await transcribeWithGemini({
+      const lines = await transcribeWithGemini({
         file,
         language,
         apiKey: apiKey.trim()
       });
       
-      const lines = parseTranscriptionToLines(transcriptionText);
       setTranscriptionLines(lines);
       
       toast({
@@ -240,7 +237,7 @@ const Index = () => {
           <div className="bg-white p-6 sm:p-8 rounded-xl sm:rounded-2xl shadow-lg border border-green-100 transform transition-all hover:-translate-y-1 hover:shadow-xl">
             <div className="w-12 h-12 sm:w-16 sm:h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4 sm:mb-6">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 sm:h-8 sm:w-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
               </svg>
             </div>
             <h3 className="text-lg sm:text-xl font-semibold mb-2 sm:mb-3 text-center text-gray-900">80+ Languages</h3>
