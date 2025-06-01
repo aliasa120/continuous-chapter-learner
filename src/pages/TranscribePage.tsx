@@ -1,10 +1,11 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import FileUpload from '../components/FileUpload';
 import LanguageSelector from '../components/LanguageSelector';
 import TranscriptionResult from '../components/TranscriptionResult';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Wand2, Sparkles } from 'lucide-react';
+import { ArrowLeft, Wand2, Sparkles, Clock, FileText } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { transcribeWithGroqAndGemini, type TranscriptionLine } from '../utils/groqGeminiTranscription';
 
@@ -16,6 +17,7 @@ const TranscribePage = () => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [showTimestamps, setShowTimestamps] = useState(true);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const mediaUrlRef = useRef<string | null>(null);
@@ -214,42 +216,40 @@ const TranscribePage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 to-white py-4 sm:py-12">
-      <div className="container mx-auto px-4">
-        <div className="mb-4 sm:mb-8">
-          <Link to="/" className="inline-flex items-center text-green-600 hover:text-green-800 transition-colors">
+    <div className="min-h-screen bg-gradient-to-br from-green-50 to-white py-2 sm:py-12">
+      <div className="container mx-auto px-2 sm:px-4">
+        <div className="mb-2 sm:mb-8">
+          <Link to="/" className="inline-flex items-center text-green-600 hover:text-green-800 transition-colors text-sm">
             <ArrowLeft className="h-4 w-4 mr-1" />
             Back to home
           </Link>
         </div>
 
-        <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-6 sm:mb-8 text-center bg-gradient-to-r from-green-600 to-emerald-500 bg-clip-text text-transparent">
-          AI-Powered Transcription & Translation
+        <h1 className="text-xl sm:text-3xl md:text-4xl font-bold mb-4 sm:mb-8 text-center bg-gradient-to-r from-green-600 to-emerald-500 bg-clip-text text-transparent px-2">
+          AI Transcription & Translation
         </h1>
 
         <div className="max-w-6xl mx-auto">
-          <div className="flex flex-col lg:flex-row gap-4 sm:gap-6">
-            {/* Enhanced Transcription Wizard Card */}
-            <div className="w-full lg:w-1/2 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl shadow-lg text-white p-4 sm:p-6 transform transition-all hover:-translate-y-1 hover:shadow-xl">
-              <div className="flex items-center mb-4">
-                <div className="bg-white/20 p-2 rounded-lg mr-3">
-                  <Sparkles className="h-4 w-4 sm:h-5 sm:w-5 text-white" /> 
+          <div className="flex flex-col lg:flex-row gap-2 sm:gap-6">
+            {/* Mobile-Optimized Transcription Card */}
+            <div className="w-full lg:w-1/2 bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg sm:rounded-xl shadow-lg text-white p-3 sm:p-6 transform transition-all hover:-translate-y-1 hover:shadow-xl">
+              <div className="flex items-center mb-3 sm:mb-4">
+                <div className="bg-white/20 p-1.5 sm:p-2 rounded-lg mr-2 sm:mr-3">
+                  <Sparkles className="h-4 w-4 text-white" /> 
                 </div>
-                <h2 className="text-lg sm:text-xl font-bold">
-                  Smart Transcription Engine
+                <h2 className="text-base sm:text-xl font-bold">
+                  Smart Transcription
                 </h2>
               </div>
-              <div className="bg-white/10 rounded-lg p-3 mb-4">
-                <p className="text-xs text-green-100 mb-2">⚡ Ultra-fast processing with cost optimization</p>
-                <p className="text-xs text-green-100">✨ Advanced Features: Speaker Detection • Precise Timing • Multi-language Support</p>
-              </div>
-              <p className="mb-4 sm:mb-6 text-green-50 text-sm sm:text-base">
+              
+              {/* Mobile: Hide detailed features text */}
+              <p className="mb-3 sm:mb-6 text-green-50 text-xs sm:text-base hidden sm:block">
                 Advanced AI transcription with real-time translation and enhanced synchronization capabilities.
               </p>
               
-              <div className="space-y-4 sm:space-y-6">
+              <div className="space-y-3 sm:space-y-6">
                 <div>
-                  <label className="block text-sm font-medium text-green-50 mb-1">
+                  <label className="block text-xs sm:text-sm font-medium text-green-50 mb-1">
                     Upload Media File
                   </label>
                   <FileUpload file={file} setFile={setFile} />
@@ -260,15 +260,15 @@ const TranscribePage = () => {
                 <Button 
                   onClick={handleTranscribe} 
                   disabled={!file || isTranscribing}
-                  className="w-full bg-white text-green-700 hover:bg-green-50 h-10 sm:h-11"
+                  className="w-full bg-white text-green-700 hover:bg-green-50 h-9 sm:h-11 text-sm sm:text-base"
                 >
                   {isTranscribing ? 
-                    <span className="flex items-center text-sm sm:text-base">
-                      <div className="w-4 h-4 border-2 border-t-transparent border-green-700 rounded-full animate-spin mr-2"></div>
-                      AI Processing...
+                    <span className="flex items-center">
+                      <div className="w-3 h-3 sm:w-4 sm:h-4 border-2 border-t-transparent border-green-700 rounded-full animate-spin mr-2"></div>
+                      Processing...
                     </span> : 
-                    <span className="flex items-center text-sm sm:text-base">
-                      <Sparkles className="mr-2 h-4 w-4" />
+                    <span className="flex items-center">
+                      <Sparkles className="mr-2 h-3 w-3 sm:h-4 sm:w-4" />
                       Start Transcription
                     </span>
                   }
@@ -276,16 +276,41 @@ const TranscribePage = () => {
               </div>
             </div>
             
-            {/* Results Card */}
-            <div className="w-full lg:w-1/2 bg-white rounded-xl shadow-lg border border-green-100 transform transition-all hover:shadow-xl">
-              <div className="p-4 sm:p-6 border-b border-green-100 bg-green-50">
-                <h2 className="text-lg sm:text-xl font-bold text-green-800 flex items-center">
-                  <Wand2 className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
-                  Smart Results with Confidence Scoring
-                </h2>
+            {/* Results Card with Timestamp Toggle */}
+            <div className="w-full lg:w-1/2 bg-white rounded-lg sm:rounded-xl shadow-lg border border-green-100 transform transition-all hover:shadow-xl">
+              <div className="p-3 sm:p-6 border-b border-green-100 bg-green-50">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                  <h2 className="text-base sm:text-xl font-bold text-green-800 flex items-center">
+                    <Wand2 className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
+                    Smart Results
+                  </h2>
+                  
+                  {/* Timestamp Toggle */}
+                  <div className="flex gap-1 sm:gap-2">
+                    <Button
+                      variant={showTimestamps ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setShowTimestamps(true)}
+                      className={`text-xs h-7 px-2 sm:px-3 ${showTimestamps ? 'bg-green-600 text-white' : 'text-green-600 border-green-300'}`}
+                    >
+                      <Clock className="h-3 w-3 mr-1" />
+                      With Time
+                    </Button>
+                    <Button
+                      variant={!showTimestamps ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setShowTimestamps(false)}
+                      className={`text-xs h-7 px-2 sm:px-3 ${!showTimestamps ? 'bg-green-600 text-white' : 'text-green-600 border-green-300'}`}
+                    >
+                      <FileText className="h-3 w-3 mr-1" />
+                      Essay View
+                    </Button>
+                  </div>
+                </div>
+                
                 {duration > 0 && (
-                  <p className="text-sm text-green-600 mt-1">
-                    Media Duration: {Math.floor(duration / 60)}:{String(Math.floor(duration % 60)).padStart(2, '0')}
+                  <p className="text-xs sm:text-sm text-green-600 mt-1">
+                    Duration: {Math.floor(duration / 60)}:{String(Math.floor(duration % 60)).padStart(2, '0')}
                   </p>
                 )}
               </div>
@@ -297,12 +322,13 @@ const TranscribePage = () => {
                 seekToTimestamp={seekToTimestamp}
                 isPlaying={isPlaying}
                 onPlayPause={handlePlayPause}
+                showTimestamps={showTimestamps}
               />
             </div>
           </div>
           
-          <div className="mt-4 sm:mt-6 text-center text-xs sm:text-sm text-gray-500 bg-green-50 p-3 sm:p-4 rounded-lg border border-green-100">
-            🎯 Cost-optimized AI • Speaker Detection • Precise Synchronization • 100+ Languages Supported
+          <div className="mt-2 sm:mt-6 text-center text-xs text-gray-500 bg-green-50 p-2 sm:p-4 rounded-lg border border-green-100">
+            🎯 Multi-language AI • Speaker Detection • Precise Sync
           </div>
         </div>
       </div>

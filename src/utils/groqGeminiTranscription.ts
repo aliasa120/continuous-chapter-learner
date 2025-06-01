@@ -1,3 +1,4 @@
+
 import Groq from 'groq-sdk';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
@@ -64,31 +65,37 @@ export const transcribeWithGroqAndGemini = async ({ file, language }: Transcript
     const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
     const targetLanguage = getLanguageName(language);
+    console.log('Translating to:', targetLanguage);
 
-    // Combine all text for efficient translation
-    const fullText = groqSegments.map(segment => segment.text).join('\n');
+    // Process each segment individually for better translation accuracy
+    const translatedSegments = await Promise.all(
+      groqSegments.map(async (segment, index) => {
+        try {
+          const translationPrompt = `Translate the following text to ${targetLanguage}. 
+Important: Only provide the direct translation, no explanations or additional text.
+Text to translate: "${segment.text}"`;
+
+          console.log(`Translating segment ${index + 1}: "${segment.text}" to ${targetLanguage}`);
+          
+          const result = await model.generateContent(translationPrompt);
+          const translatedText = result.response.text().trim();
+          
+          console.log(`Translation result: "${translatedText}"`);
+          
+          return {
+            ...segment,
+            text: translatedText || segment.text, // Fallback to original if translation fails
+          };
+        } catch (error) {
+          console.error(`Translation failed for segment ${index + 1}:`, error);
+          return segment; // Return original segment if translation fails
+        }
+      })
+    );
+
+    console.log('Cost-optimized transcription completed:', translatedSegments.length, 'segments');
     
-    const translationPrompt = `Translate the following transcribed text to ${targetLanguage}. 
-Maintain the same line structure and preserve the meaning. 
-Only provide the translated text, line by line:
-
-${fullText}`;
-
-    const result = await model.generateContent(translationPrompt);
-    const translatedText = result.response.text();
-
-    console.log('Gemini translation completed');
-
-    // Step 5: Combine Groq timing with Gemini translation
-    const translatedLines = translatedText.split('\n').filter(line => line.trim());
-    const finalSegments = groqSegments.map((segment, index) => ({
-      ...segment,
-      text: translatedLines[index] || segment.text, // Fallback to original if translation is missing
-    }));
-
-    console.log('Cost-optimized transcription completed:', finalSegments.length, 'segments');
-    
-    return finalSegments;
+    return translatedSegments;
   } catch (error) {
     console.error('Cost-optimized transcription error:', error);
     throw new Error('Transcription failed. Please check your API keys and try again.');
