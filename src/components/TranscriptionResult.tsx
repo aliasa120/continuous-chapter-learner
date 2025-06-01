@@ -1,7 +1,8 @@
+
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Clipboard, ClipboardCheck, Play, Pause, User, Award, Clock } from 'lucide-react';
+import { Clipboard, ClipboardCheck, Play, Pause, Clock } from 'lucide-react';
 import type { TranscriptionLine } from '../utils/groqGeminiTranscription';
 
 interface TranscriptionResultProps {
@@ -29,11 +30,7 @@ const TranscriptionResult: React.FC<TranscriptionResultProps> = ({
   const copyToClipboard = () => {
     const fullText = showTimestamps
       ? transcriptionLines
-          .map(line => {
-            const confidence = line.confidence ? ` (${line.confidence}%)` : '';
-            const speaker = line.speaker ? ` ${line.speaker}` : '';
-            return `${line.timestamp}${speaker}${confidence}: ${line.text}`;
-          })
+          .map(line => `${line.timestamp}: ${line.text}`)
           .join('\n')
       : transcriptionLines
           .map(line => line.text)
@@ -52,41 +49,12 @@ const TranscriptionResult: React.FC<TranscriptionResultProps> = ({
     return currentTime >= word.start && currentTime <= word.end;
   };
 
-  const renderTextWithWordHighlighting = (line: TranscriptionLine) => {
-    if (!line.words || line.words.length === 0) {
-      return <span>{line.text}</span>;
-    }
-
-    return (
-      <span>
-        {line.words.map((word, wordIndex) => (
-          <span
-            key={wordIndex}
-            className={`transition-all duration-200 ${
-              isWordActive(word)
-                ? 'bg-yellow-300 text-gray-900 font-semibold px-1 rounded shadow-sm'
-                : ''
-            }`}
-          >
-            {word.word}{' '}
-          </span>
-        ))}
-      </span>
-    );
-  };
-
-  const getConfidenceColor = (confidence?: number) => {
-    if (!confidence) return 'text-gray-500';
-    if (confidence >= 95) return 'text-green-600';
-    if (confidence >= 85) return 'text-yellow-600';
-    return 'text-red-500';
-  };
-
-  const getConfidenceIcon = (confidence?: number) => {
-    if (!confidence) return null;
-    if (confidence >= 95) return '🟢';
-    if (confidence >= 85) return '🟡';
-    return '🔴';
+  const getConfidenceIndicator = (confidence?: number) => {
+    if (!confidence) return '⚪'; // Gray for unknown
+    if (confidence >= 90) return '🟢'; // Green for excellent
+    if (confidence >= 75) return '🟡'; // Yellow for good
+    if (confidence >= 60) return '🟠'; // Orange for moderate
+    return '🔴'; // Red for poor
   };
 
   // Enhanced auto-scroll with improved synchronization
@@ -116,8 +84,8 @@ const TranscriptionResult: React.FC<TranscriptionResultProps> = ({
         <div className="flex justify-center items-center h-full">
           <div className="text-center">
             <div className="w-8 h-8 sm:w-16 sm:h-16 mx-auto border-4 rounded-full border-l-green-600 border-r-green-300 border-b-green-600 border-t-green-300 animate-spin mb-4"></div>
-            <p className="text-gray-900 animate-pulse text-sm font-semibold">Smart AI Processing...</p>
-            <p className="text-xs text-gray-600 mt-2 hidden sm:block">Speaker detection • Word-level sync • Precise timing</p>
+            <p className="text-gray-900 animate-pulse text-sm font-semibold">AI Processing...</p>
+            <p className="text-xs text-gray-600 mt-2 hidden sm:block">Word-level sync • Precise timing</p>
           </div>
         </div>
       </div>
@@ -129,14 +97,12 @@ const TranscriptionResult: React.FC<TranscriptionResultProps> = ({
       <div className="p-3 sm:p-6 h-60 sm:h-96 flex items-center justify-center text-center">
         <div className="text-gray-600">
           <div className="text-2xl sm:text-4xl mb-4">🎯</div>
-          <p className="mb-2 text-sm font-medium">Smart transcription results will appear here</p>
-          <p className="text-xs">Upload a file and start AI transcription</p>
+          <p className="mb-2 text-sm font-medium">Transcription results will appear here</p>
+          <p className="text-xs">Upload a file and start transcription</p>
         </div>
       </div>
     );
   }
-
-  const averageConfidence = transcriptionLines.reduce((sum, line) => sum + (line.confidence || 0), 0) / transcriptionLines.length;
 
   // Essay view (without timestamps)
   if (!showTimestamps) {
@@ -205,11 +171,6 @@ const TranscriptionResult: React.FC<TranscriptionResultProps> = ({
             {isPlaying ? <Pause className="h-3 w-3 sm:h-4 sm:w-4" /> : <Play className="h-3 w-3 sm:h-4 sm:w-4" />}
             <span className="hidden sm:inline">{isPlaying ? "Pause" : "Play"}</span>
           </Button>
-          
-          <div className="hidden md:flex items-center gap-1 text-xs text-gray-600 bg-white rounded px-2 py-1 border">
-            <Award className="h-3 w-3" />
-            <span>Avg: {averageConfidence.toFixed(0)}%</span>
-          </div>
         </div>
         
         <div className="text-xs text-gray-500 hidden sm:block font-medium">
@@ -271,20 +232,11 @@ const TranscriptionResult: React.FC<TranscriptionResultProps> = ({
                         <Clock className="h-2 w-2 sm:h-3 sm:w-3" />
                         {line.timestamp}
                       </span>
-                      {line.speaker && (
-                        <div className={`flex items-center gap-1 text-xs px-1.5 sm:px-2 py-0.5 sm:py-1 rounded ${
-                          isActive ? 'text-blue-800 bg-blue-200' : 'text-blue-600 bg-blue-100'
-                        }`}>
-                          <User className="h-2 w-2 sm:h-3 sm:w-3" />
-                          <span>{line.speaker}</span>
-                        </div>
-                      )}
                       {line.confidence && (
                         <div className={`flex items-center gap-1 text-xs px-1.5 sm:px-2 py-0.5 sm:py-1 rounded ${
                           isActive ? 'bg-gray-200' : 'bg-gray-100'
                         }`}>
-                          <Award className="h-2 w-2 sm:h-3 sm:w-3" />
-                          <span>{line.confidence}%</span>
+                          <span>{getConfidenceIndicator(line.confidence)}</span>
                         </div>
                       )}
                     </div>

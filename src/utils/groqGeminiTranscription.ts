@@ -7,7 +7,6 @@ export interface TranscriptionLine {
   text: string;
   startTime: number;
   endTime: number;
-  speaker?: string;
   confidence?: number;
   words?: Array<{
     word: string;
@@ -67,20 +66,37 @@ export const transcribeWithGroqAndGemini = async ({ file, language }: Transcript
     const targetLanguage = getLanguageName(language);
     console.log('Translating to:', targetLanguage);
 
-    // Process each segment individually for better translation accuracy
+    // Get the full text first for better context
+    const fullText = groqSegments.map(segment => segment.text).join(' ');
+    
+    // Translate the full text for better context and accuracy
+    const fullTranslationPrompt = `Translate the following text to ${targetLanguage}. 
+Important: Only provide the direct translation, no explanations or additional text.
+Maintain the same meaning and context.
+Text to translate: "${fullText}"`;
+
+    console.log(`Translating full text to ${targetLanguage}`);
+    
+    const fullResult = await model.generateContent(fullTranslationPrompt);
+    const fullTranslatedText = fullResult.response.text().trim();
+    
+    console.log(`Full translation result: "${fullTranslatedText}"`);
+
+    // Now translate each segment individually but with the context of the full translation
     const translatedSegments = await Promise.all(
       groqSegments.map(async (segment, index) => {
         try {
-          const translationPrompt = `Translate the following text to ${targetLanguage}. 
-Important: Only provide the direct translation, no explanations or additional text.
-Text to translate: "${segment.text}"`;
+          const segmentPrompt = `Translate this segment to ${targetLanguage}. 
+Context: This is part of a larger text about the same topic.
+Only provide the direct translation, no explanations.
+Segment to translate: "${segment.text}"`;
 
           console.log(`Translating segment ${index + 1}: "${segment.text}" to ${targetLanguage}`);
           
-          const result = await model.generateContent(translationPrompt);
+          const result = await model.generateContent(segmentPrompt);
           const translatedText = result.response.text().trim();
           
-          console.log(`Translation result: "${translatedText}"`);
+          console.log(`Segment translation result: "${translatedText}"`);
           
           return {
             ...segment,
@@ -108,9 +124,6 @@ const parseGroqTranscription = (transcription: any): TranscriptionLine[] => {
   if (transcription.segments) {
     transcription.segments.forEach((segment: any, index: number) => {
       if (segment.text && segment.text.trim()) {
-        // Basic speaker detection based on pauses and segment patterns
-        const speaker = detectSpeaker(segment, index);
-        
         // Extract word-level timestamps if available
         const words = transcription.words?.filter((word: any) => 
           word.start >= segment.start && word.end <= segment.end
@@ -125,7 +138,6 @@ const parseGroqTranscription = (transcription: any): TranscriptionLine[] => {
           text: segment.text.trim(),
           startTime: segment.start,
           endTime: segment.end,
-          speaker,
           confidence: Math.round((1 + (segment.avg_logprob || -0.5)) * 100),
           words,
         });
@@ -134,18 +146,6 @@ const parseGroqTranscription = (transcription: any): TranscriptionLine[] => {
   }
   
   return segments;
-};
-
-// Basic speaker detection based on pauses and patterns
-const detectSpeaker = (segment: any, index: number): string => {
-  // Simple heuristic: alternate speakers based on significant pauses
-  const pauseThreshold = 2.0; // 2 seconds
-  
-  if (index === 0) return 'Speaker A';
-  
-  // If there's a significant pause, likely a speaker change
-  const speakerIndex = Math.floor(index / 3) % 2; // Rough speaker alternation
-  return speakerIndex === 0 ? 'Speaker A' : 'Speaker B';
 };
 
 const getLanguageName = (lang: string): string => {
