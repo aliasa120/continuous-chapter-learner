@@ -9,6 +9,11 @@ export interface TranscriptionLine {
   endTime: number;
   speaker?: string;
   confidence?: number;
+  words?: Array<{
+    word: string;
+    start: number;
+    end: number;
+  }>;
 }
 
 export interface TranscriptionOptions {
@@ -28,6 +33,7 @@ export const transcribeWithGroqAndGemini = async ({ file, language }: Transcript
     // Step 1: Use Groq for initial transcription in original language
     const groq = new Groq({
       apiKey: GROQ_API_KEY,
+      dangerouslyAllowBrowser: true,
     });
 
     console.log('Step 1: Transcribing with Groq Whisper-large-v3-turbo...');
@@ -42,7 +48,7 @@ export const transcribeWithGroqAndGemini = async ({ file, language }: Transcript
 
     console.log('Groq transcription completed:', transcription);
 
-    // Step 2: Parse Groq response and extract segments
+    // Step 2: Parse Groq response and extract segments with word-level timestamps
     const groqSegments = parseGroqTranscription(transcription);
     console.log('Parsed Groq segments:', groqSegments.length);
 
@@ -55,11 +61,9 @@ export const transcribeWithGroqAndGemini = async ({ file, language }: Transcript
     // Step 4: Use Gemini for translation to target language
     console.log('Step 2: Translating with Gemini to', getLanguageName(language));
     
-    const ai = new GoogleGenAI({
-      apiKey: GEMINI_API_KEY,
-    });
+    const ai = new GoogleGenAI(GEMINI_API_KEY);
+    const model = ai.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
-    const model = 'gemini-2.5-flash-preview-05-20';
     const targetLanguage = getLanguageName(language);
 
     // Combine all text for efficient translation
@@ -71,36 +75,8 @@ Only provide the translated text, line by line:
 
 ${fullText}`;
 
-    const config = {
-      thinkingConfig: {
-        thinkingBudget: 0, // Non-thinking mode for cost efficiency
-      },
-      responseMimeType: 'text/plain',
-    };
-
-    const contents = [
-      {
-        role: 'user',
-        parts: [
-          {
-            text: translationPrompt,
-          },
-        ],
-      },
-    ];
-
-    const response = await ai.models.generateContentStream({
-      model,
-      config,
-      contents,
-    });
-
-    let translatedText = '';
-    for await (const chunk of response) {
-      if (chunk.text) {
-        translatedText += chunk.text;
-      }
-    }
+    const result = await model.generateContent(translationPrompt);
+    const translatedText = result.response.text();
 
     console.log('Gemini translation completed');
 
@@ -116,7 +92,7 @@ ${fullText}`;
     return finalSegments;
   } catch (error) {
     console.error('Cost-optimized transcription error:', error);
-    throw new Error('Transcription failed. Please try again.');
+    throw new Error('Transcription failed. Please check your API keys and try again.');
   }
 };
 
@@ -129,13 +105,23 @@ const parseGroqTranscription = (transcription: any): TranscriptionLine[] => {
         // Basic speaker detection based on pauses and segment patterns
         const speaker = detectSpeaker(segment, index);
         
+        // Extract word-level timestamps if available
+        const words = transcription.words?.filter((word: any) => 
+          word.start >= segment.start && word.end <= segment.end
+        ).map((word: any) => ({
+          word: word.word,
+          start: word.start,
+          end: word.end,
+        })) || [];
+        
         segments.push({
           timestamp: `${formatTime(segment.start)}-${formatTime(segment.end)}`,
           text: segment.text.trim(),
           startTime: segment.start,
           endTime: segment.end,
           speaker,
-          confidence: Math.round((1 + (segment.avg_logprob || -0.5)) * 100), // Convert logprob to percentage
+          confidence: Math.round((1 + (segment.avg_logprob || -0.5)) * 100),
+          words,
         });
       }
     });
@@ -147,13 +133,11 @@ const parseGroqTranscription = (transcription: any): TranscriptionLine[] => {
 // Basic speaker detection based on pauses and patterns
 const detectSpeaker = (segment: any, index: number): string => {
   // Simple heuristic: alternate speakers based on significant pauses
-  // This is a basic implementation to address the speaker detection limitation
   const pauseThreshold = 2.0; // 2 seconds
   
   if (index === 0) return 'Speaker A';
   
   // If there's a significant pause, likely a speaker change
-  // This is a simplified approach - you could enhance with ML models
   const speakerIndex = Math.floor(index / 3) % 2; // Rough speaker alternation
   return speakerIndex === 0 ? 'Speaker A' : 'Speaker B';
 };

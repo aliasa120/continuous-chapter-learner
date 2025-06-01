@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Select,
   SelectContent,
@@ -7,7 +7,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Globe } from 'lucide-react';
+import { Input } from "@/components/ui/input";
+import { Globe, Search } from 'lucide-react';
 
 interface LanguageSelectorProps {
   language: string;
@@ -15,6 +16,8 @@ interface LanguageSelectorProps {
 }
 
 const LanguageSelector: React.FC<LanguageSelectorProps> = ({ language, setLanguage }) => {
+  const [searchTerm, setSearchTerm] = useState('');
+
   const languages = [
     { value: "en", label: "English" },
     { value: "af", label: "Afrikaans" },
@@ -118,6 +121,14 @@ const LanguageSelector: React.FC<LanguageSelectorProps> = ({ language, setLangua
     { value: "ur", label: "Urdu" },
   ];
 
+  // Filter languages based on search term
+  const filteredLanguages = languages.filter(lang =>
+    lang.label.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    lang.value.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const selectedLanguage = languages.find(lang => lang.value === language);
+
   return (
     <div className="space-y-1">
       <label className="block text-sm font-medium mb-1 text-green-100">
@@ -127,14 +138,39 @@ const LanguageSelector: React.FC<LanguageSelectorProps> = ({ language, setLangua
         <Globe className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-green-200 z-10" />
         <Select value={language} onValueChange={setLanguage}>
           <SelectTrigger className="w-full pl-10 bg-white/10 border-green-300 focus:ring-green-400 focus:border-green-400 text-white placeholder:text-green-200">
-            <SelectValue placeholder="Select language" />
+            <SelectValue placeholder="Select language">
+              {selectedLanguage?.label || "Select language"}
+            </SelectValue>
           </SelectTrigger>
-          <SelectContent className="bg-white border-gray-200 max-h-60">
-            {languages.map((lang) => (
-              <SelectItem key={lang.value} value={lang.value} className="hover:bg-gray-50 focus:bg-gray-50 text-gray-900">
-                {lang.label}
-              </SelectItem>
-            ))}
+          <SelectContent className="bg-white border-gray-200 max-h-80">
+            <div className="sticky top-0 z-10 bg-white border-b border-gray-200 p-2">
+              <div className="relative">
+                <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Input
+                  placeholder="Search languages..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-8 text-sm border-gray-200 focus:ring-green-400 focus:border-green-400"
+                />
+              </div>
+            </div>
+            <div className="max-h-60 overflow-y-auto">
+              {filteredLanguages.length > 0 ? (
+                filteredLanguages.map((lang) => (
+                  <SelectItem 
+                    key={lang.value} 
+                    value={lang.value} 
+                    className="hover:bg-gray-50 focus:bg-gray-50 text-gray-900"
+                  >
+                    {lang.label}
+                  </SelectItem>
+                ))
+              ) : (
+                <div className="p-2 text-gray-500 text-sm text-center">
+                  No languages found matching "{searchTerm}"
+                </div>
+              )}
+            </div>
           </SelectContent>
         </Select>
       </div>
