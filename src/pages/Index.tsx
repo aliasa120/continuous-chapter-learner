@@ -1,3 +1,4 @@
+
 import React, { useState, useRef } from 'react';
 import FileUpload from '../components/FileUpload';
 import LanguageSelector from '../components/LanguageSelector';
@@ -14,6 +15,7 @@ const Index = () => {
   const [transcriptionLines, setTranscriptionLines] = useState<TranscriptionLine[]>([]);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const { toast } = useToast();
@@ -62,6 +64,13 @@ const Index = () => {
     }
   };
 
+  const handleLoadedMetadata = () => {
+    const media = audioRef.current || videoRef.current;
+    if (media) {
+      setDuration(media.duration);
+    }
+  };
+
   const handlePlayPause = () => {
     const media = audioRef.current || videoRef.current;
     if (media) {
@@ -99,6 +108,7 @@ const Index = () => {
           src={url} 
           className="hidden" 
           onTimeUpdate={handleTimeUpdate}
+          onLoadedMetadata={handleLoadedMetadata}
           onEnded={() => setIsPlaying(false)}
           onPlay={() => setIsPlaying(true)}
           onPause={() => setIsPlaying(false)}
@@ -111,6 +121,7 @@ const Index = () => {
           src={url} 
           className="hidden" 
           onTimeUpdate={handleTimeUpdate}
+          onLoadedMetadata={handleLoadedMetadata}
           onEnded={() => setIsPlaying(false)}
           onPlay={() => setIsPlaying(true)}
           onPause={() => setIsPlaying(false)}
