@@ -1,4 +1,3 @@
-
 import Groq from 'groq-sdk';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
@@ -26,7 +25,7 @@ const GEMINI_API_KEY = 'AIzaSyDcvqkBlNTX1mhT6y7e-BK6Ix-AdCbR95A';
 
 export const transcribeWithGroqAndGemini = async ({ file, language }: TranscriptionOptions): Promise<TranscriptionLine[]> => {
   try {
-    console.log('Starting cost-optimized transcription with Groq + Gemini');
+    console.log('Starting transcription with Groq + Gemini');
     console.log('Target language:', language, 'File:', file.name);
     
     // Step 1: Use Groq for initial transcription in original language
@@ -51,52 +50,36 @@ export const transcribeWithGroqAndGemini = async ({ file, language }: Transcript
     const groqSegments = parseGroqTranscription(transcription);
     console.log('Parsed Groq segments:', groqSegments.length);
 
-    // Step 3: If target language is English, return as-is (cost optimization)
+    // Step 3: If target language is English, return as-is
     if (language === 'en') {
       console.log('Target language is English, skipping translation');
       return groqSegments;
     }
 
     // Step 4: Use Gemini for translation to target language
-    console.log('Step 2: Translating with Gemini to', getLanguageName(language));
+    console.log('Step 2: Translating segments with Gemini to', getLanguageName(language));
     
     const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
     const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
     const targetLanguage = getLanguageName(language);
-    console.log('Translating to:', targetLanguage);
+    console.log('Translating each segment to:', targetLanguage);
 
-    // Get the full text first for better context
-    const fullText = groqSegments.map(segment => segment.text).join(' ');
-    
-    // Translate the full text for better context and accuracy
-    const fullTranslationPrompt = `Translate the following text to ${targetLanguage}. 
-Important: Only provide the direct translation, no explanations or additional text.
-Maintain the same meaning and context.
-Text to translate: "${fullText}"`;
-
-    console.log(`Translating full text to ${targetLanguage}`);
-    
-    const fullResult = await model.generateContent(fullTranslationPrompt);
-    const fullTranslatedText = fullResult.response.text().trim();
-    
-    console.log(`Full translation result: "${fullTranslatedText}"`);
-
-    // Now translate each segment individually but with the context of the full translation
+    // Translate each segment individually while preserving timestamps
     const translatedSegments = await Promise.all(
       groqSegments.map(async (segment, index) => {
         try {
-          const segmentPrompt = `Translate this segment to ${targetLanguage}. 
-Context: This is part of a larger text about the same topic.
-Only provide the direct translation, no explanations.
-Segment to translate: "${segment.text}"`;
+          // Create a focused translation prompt for each segment
+          const segmentPrompt = `Translate the following text to ${targetLanguage}. 
+IMPORTANT: Only provide the direct translation, no explanations or additional text.
+Text to translate: "${segment.text}"`;
 
-          console.log(`Translating segment ${index + 1}: "${segment.text}" to ${targetLanguage}`);
+          console.log(`Translating segment ${index + 1}/${groqSegments.length}: "${segment.text}" to ${targetLanguage}`);
           
           const result = await model.generateContent(segmentPrompt);
           const translatedText = result.response.text().trim();
           
-          console.log(`Segment translation result: "${translatedText}"`);
+          console.log(`Segment ${index + 1} translation result: "${translatedText}"`);
           
           return {
             ...segment,
@@ -109,11 +92,11 @@ Segment to translate: "${segment.text}"`;
       })
     );
 
-    console.log('Cost-optimized transcription completed:', translatedSegments.length, 'segments');
+    console.log('All segments translated successfully:', translatedSegments.length);
     
     return translatedSegments;
   } catch (error) {
-    console.error('Cost-optimized transcription error:', error);
+    console.error('Transcription error:', error);
     throw new Error('Transcription failed. Please check your API keys and try again.');
   }
 };
