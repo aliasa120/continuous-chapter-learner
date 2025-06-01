@@ -1,6 +1,5 @@
-
 import Groq from 'groq-sdk';
-import { GoogleGenAI } from '@google/genai';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
 export interface TranscriptionLine {
   timestamp: string;
@@ -61,8 +60,8 @@ export const transcribeWithGroqAndGemini = async ({ file, language }: Transcript
     // Step 4: Use Gemini for translation to target language
     console.log('Step 2: Translating with Gemini to', getLanguageName(language));
     
-    const ai = new GoogleGenAI(GEMINI_API_KEY);
-    const model = ai.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
     const targetLanguage = getLanguageName(language);
 
