@@ -1,8 +1,6 @@
-
 import React, { useState, useRef } from 'react';
 import FileUpload from '../components/FileUpload';
 import LanguageSelector from '../components/LanguageSelector';
-import ApiKeyInput from '../components/ApiKeyInput';
 import TranscriptionResult from '../components/TranscriptionResult';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
@@ -12,7 +10,6 @@ import { transcribeWithGemini, type TranscriptionLine } from '../utils/geminiTra
 const Index = () => {
   const [file, setFile] = useState<File | null>(null);
   const [language, setLanguage] = useState("en");
-  const [apiKey, setApiKey] = useState<string>("");
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [transcriptionLines, setTranscriptionLines] = useState<TranscriptionLine[]>([]);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -31,23 +28,13 @@ const Index = () => {
       return;
     }
 
-    if (!apiKey.trim()) {
-      toast({
-        title: "API Key required",
-        description: "Please enter your Google Gemini API key.",
-        variant: "destructive",
-      });
-      return;
-    }
-
     setIsTranscribing(true);
     setTranscriptionLines([]);
     
     try {
       const lines = await transcribeWithGemini({
         file,
-        language,
-        apiKey: apiKey.trim()
+        language
       });
       
       setTranscriptionLines(lines);
@@ -175,11 +162,9 @@ const Index = () => {
                 
                 <LanguageSelector language={language} setLanguage={setLanguage} />
                 
-                <ApiKeyInput apiKey={apiKey} setApiKey={setApiKey} />
-                
                 <Button 
                   onClick={handleTranscribe} 
-                  disabled={!file || !apiKey.trim() || isTranscribing}
+                  disabled={!file || isTranscribing}
                   className="w-full bg-white text-green-700 hover:bg-green-50 h-10 sm:h-11"
                 >
                   {isTranscribing ? 
@@ -217,7 +202,7 @@ const Index = () => {
           </div>
           
           <div className="mt-4 sm:mt-6 text-center text-xs sm:text-sm text-gray-500 bg-green-50 p-3 sm:p-4 rounded-lg border border-green-100">
-            Supports MP3, WAV, MP4, MOV files up to 100MB • Powered by Google Gemini Flash 2.0 Lite
+            Supports MP3, WAV, MP4, MOV files up to 100MB • Powered by Google Gemini 2.5 Flash
           </div>
         </div>
 
