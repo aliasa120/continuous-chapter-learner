@@ -89,16 +89,8 @@ Translated text in ${targetLanguageName}:`;
     // Step 4: Get the audio duration for timestamp generation
     console.log('Step 3: Getting audio duration for timestamp generation...');
     
-    // Get a new transcription just to get the duration
-    const durationTranscription = await groq.audio.transcriptions.create({
-      file: file,
-      model: "whisper-large-v3-turbo",
-      response_format: "verbose_json",
-      temperature: 0.0,
-    });
-    
-    // Get total duration of the audio
-    const totalDuration = (durationTranscription as any).duration || 0;
+    // Get total duration of the audio from the initial transcription
+    const totalDuration = (transcription as any).duration || 0;
     console.log('✓ Audio duration:', totalDuration, 'seconds');
     
     // We don't need segments from original transcript anymore
