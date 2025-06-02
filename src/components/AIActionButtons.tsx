@@ -9,6 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 interface AIActionButtonsProps {
   text: string;
   language: string;
+  fullTranscription?: string;
   onExpand?: () => void;
   isExpanded?: boolean;
   className?: string;
@@ -17,6 +18,7 @@ interface AIActionButtonsProps {
 const AIActionButtons: React.FC<AIActionButtonsProps> = ({
   text,
   language,
+  fullTranscription,
   onExpand,
   isExpanded = false,
   className = ""
@@ -46,7 +48,7 @@ const AIActionButtons: React.FC<AIActionButtonsProps> = ({
 
     setIsExplaining(true);
     try {
-      const result = await explainTextWithAI(text, language);
+      const result = await explainTextWithAI(text, language, fullTranscription);
       setExplanation(result);
       if (onExpand && !isExpanded) {
         onExpand();
@@ -70,7 +72,7 @@ const AIActionButtons: React.FC<AIActionButtonsProps> = ({
 
     setIsSummarizing(true);
     try {
-      const result = await summarizeTextWithAI(text, language);
+      const result = await summarizeTextWithAI(text, language, fullTranscription);
       setSummary(result);
       if (onExpand && !isExpanded) {
         onExpand();

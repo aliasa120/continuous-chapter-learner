@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -30,6 +31,9 @@ const TranscriptionResult: React.FC<TranscriptionResultProps> = ({
   const [expandedCards, setExpandedCards] = React.useState<Set<number>>(new Set());
   const [expandedEssay, setExpandedEssay] = React.useState(false);
   const activeLineRef = React.useRef<HTMLDivElement>(null);
+
+  // Get full transcription context for AI features
+  const fullTranscription = transcriptionLines.map(line => line.text).join(' ');
 
   const copyToClipboard = () => {
     const fullText = showTimestamps
@@ -120,8 +124,6 @@ const TranscriptionResult: React.FC<TranscriptionResultProps> = ({
 
   // Essay view (without timestamps)
   if (!showTimestamps) {
-    const fullText = transcriptionLines.map(line => line.text).join(' ');
-    
     return (
       <div className="flex flex-col h-60 sm:h-96">
         {/* Controls Bar for Essay View */}
@@ -169,11 +171,12 @@ const TranscriptionResult: React.FC<TranscriptionResultProps> = ({
               </p>
             </div>
             
-            {/* AI Actions for Essay View */}
+            {/* AI Actions for Essay View with Full Context */}
             <div className="border-t pt-4">
               <AIActionButtons
-                text={fullText}
+                text={fullTranscription}
                 language={language}
+                fullTranscription={fullTranscription}
                 onExpand={() => setExpandedEssay(!expandedEssay)}
                 isExpanded={expandedEssay}
                 className="max-w-md"
@@ -294,10 +297,11 @@ const TranscriptionResult: React.FC<TranscriptionResultProps> = ({
                     )}
                   </p>
 
-                  {/* AI Action Buttons */}
+                  {/* AI Action Buttons with Full Context */}
                   <AIActionButtons
                     text={line.text}
                     language={language}
+                    fullTranscription={fullTranscription}
                     onExpand={() => toggleCardExpansion(index)}
                     isExpanded={isExpanded}
                   />

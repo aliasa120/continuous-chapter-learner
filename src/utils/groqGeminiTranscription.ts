@@ -1,3 +1,4 @@
+
 import Groq from 'groq-sdk';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
@@ -25,7 +26,7 @@ const GEMINI_API_KEY = 'AIzaSyDcvqkBlNTX1mhT6y7e-BK6Ix-AdCbR95A';
 
 export const transcribeWithGroqAndGemini = async ({ file, language }: TranscriptionOptions): Promise<TranscriptionLine[]> => {
   try {
-    console.log('=== STARTING TRANSCRIPTION PROCESS ===');
+    console.log('=== STARTING COMPREHENSIVE TRANSCRIPTION PROCESS ===');
     console.log('Target language:', language, 'File:', file.name);
     
     // Step 1: Use Groq for initial transcription in original language
@@ -44,70 +45,90 @@ export const transcribeWithGroqAndGemini = async ({ file, language }: Transcript
       temperature: 0.0,
     });
 
-    console.log('✓ Groq transcription completed:', transcription);
+    console.log('✓ Groq transcription completed successfully');
+    console.log('Original transcription language detected:', transcription.language);
 
     // Step 2: Parse Groq response and extract segments with word-level timestamps
     const groqSegments = parseGroqTranscription(transcription);
-    console.log('✓ Parsed Groq segments:', groqSegments.length);
+    console.log('✓ Parsed segments count:', groqSegments.length);
 
-    // Step 3: If target language is English, return as-is
-    if (language === 'en') {
-      console.log('✓ Target language is English, returning original transcription');
+    // Step 3: Check if translation is needed
+    const originalLanguage = transcription.language || 'unknown';
+    const targetLanguageName = getLanguageName(language);
+    
+    console.log('Original language detected:', originalLanguage);
+    console.log('Target language requested:', targetLanguageName);
+
+    // If target language is the same as original, return as-is
+    if (language === 'en' && originalLanguage === 'english') {
+      console.log('✓ No translation needed - both languages are English');
       return groqSegments;
     }
 
-    // Step 4: Use Gemini for translation to target language
-    console.log('Step 2: Translating ALL segments to target language:', getLanguageName(language));
+    // Step 4: Translate using Gemini with improved strategy
+    console.log('Step 2: Starting translation process...');
     
     const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
     const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
-    const targetLanguageName = getLanguageName(language);
-    console.log('🔄 Starting translation process for', groqSegments.length, 'segments to:', targetLanguageName);
-
-    // Create a comprehensive translation prompt with all segments
-    const allSegmentTexts = groqSegments.map((segment, index) => 
-      `Segment ${index + 1}: "${segment.text}"`
+    // Create comprehensive translation prompt
+    const segmentTexts = groqSegments.map((segment, index) => 
+      `[${index + 1}] ${segment.text.trim()}`
     ).join('\n');
 
-    const comprehensivePrompt = `You are a professional translator. Translate ALL the following text segments from their original language to ${targetLanguageName}.
+    const translationPrompt = `You are a professional translator. Your task is to translate the following transcription segments from ${originalLanguage} to ${targetLanguageName}.
 
 CRITICAL INSTRUCTIONS:
-1. Translate each segment accurately to ${targetLanguageName}
-2. Maintain the same meaning and context
-3. Return ONLY the translated text for each segment, one per line
-4. Do not add explanations, notes, or extra text
-5. Keep the same number of segments as input
+1. Translate each numbered segment accurately to ${targetLanguageName}
+2. Maintain the original meaning and context
+3. Return ONLY the translated text for each segment
+4. Keep the same numbering format: [1] translated text, [2] translated text, etc.
+5. Do not add explanations, notes, or commentary
+6. Preserve the natural flow and tone of speech
 
-Original segments to translate:
-${allSegmentTexts}
+Original transcription segments to translate:
+${segmentTexts}
 
-Expected format:
-Segment 1 translation
-Segment 2 translation
-...and so on
+Translate all segments to ${targetLanguageName}:`;
 
-Translate to: ${targetLanguageName}`;
-
-    console.log('🔄 Sending comprehensive translation request to Gemini...');
+    console.log('🔄 Sending translation request to Gemini...');
+    console.log('Translation prompt preview:', translationPrompt.substring(0, 200) + '...');
     
-    const result = await model.generateContent(comprehensivePrompt);
+    const result = await model.generateContent(translationPrompt);
     const translatedResponse = result.response.text().trim();
     
-    console.log('✓ Gemini translation response received:', translatedResponse);
+    console.log('✓ Gemini translation completed');
+    console.log('Translation response preview:', translatedResponse.substring(0, 200) + '...');
 
-    // Parse the translated response
-    const translatedLines = translatedResponse.split('\n').filter(line => line.trim());
+    // Parse translation response with improved error handling
+    const translatedLines = translatedResponse
+      .split('\n')
+      .filter(line => line.trim())
+      .map(line => {
+        // Remove numbering like [1], [2], etc.
+        return line.replace(/^\[\d+\]\s*/, '').trim();
+      });
     
-    console.log('✓ Parsed translated lines:', translatedLines.length);
+    console.log('✓ Parsed translated lines count:', translatedLines.length);
+    console.log('✓ Original segments count:', groqSegments.length);
 
-    // Map translations back to segments
+    // Verify translation count matches original
+    if (translatedLines.length !== groqSegments.length) {
+      console.warn('⚠️ Translation count mismatch. Using fallback strategy...');
+      // Fallback: pad with original text if needed
+      while (translatedLines.length < groqSegments.length) {
+        const missingIndex = translatedLines.length;
+        translatedLines.push(groqSegments[missingIndex]?.text || '');
+      }
+    }
+
+    // Map translations back to segments with verification
     const finalSegments = groqSegments.map((segment, index) => {
       const translatedText = translatedLines[index]?.trim() || segment.text;
       
-      console.log(`Mapping segment ${index + 1}:`);
-      console.log(`  Original: "${segment.text}"`);
-      console.log(`  Translated: "${translatedText}"`);
+      console.log(`Segment ${index + 1}:`);
+      console.log(`  Original (${originalLanguage}): "${segment.text}"`);
+      console.log(`  Translated (${targetLanguageName}): "${translatedText}"`);
       
       return {
         ...segment,
@@ -115,8 +136,9 @@ Translate to: ${targetLanguageName}`;
       };
     });
 
-    console.log('✓ Final translation complete. All segments processed:', finalSegments.length);
-    console.log('=== TRANSCRIPTION PROCESS COMPLETE ===');
+    console.log('✓ Translation mapping complete');
+    console.log('✓ Final segments count:', finalSegments.length);
+    console.log('=== TRANSCRIPTION PROCESS COMPLETED SUCCESSFULLY ===');
     
     return finalSegments;
   } catch (error) {
@@ -217,21 +239,29 @@ const formatTime = (seconds: number): string => {
   return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
 };
 
-// Add AI explanation function
-export const explainTextWithAI = async (text: string, language: string): Promise<string> => {
+// Enhanced AI explanation function with full context
+export const explainTextWithAI = async (text: string, language: string, fullTranscription?: string): Promise<string> => {
   try {
     const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
     const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
     
     const targetLanguageName = getLanguageName(language);
     
-    const prompt = `Explain the following text in a simple, clear way in ${targetLanguageName}. Keep it concise and easy to understand:
+    const contextualPrompt = fullTranscription 
+      ? `Given this full transcription context:
+"${fullTranscription}"
+
+Please explain this specific part in ${targetLanguageName}:
+"${text}"
+
+Provide a clear, contextual explanation in ${targetLanguageName}:`
+      : `Explain the following text clearly and simply in ${targetLanguageName}:
 
 "${text}"
 
-Provide a brief explanation in ${targetLanguageName}:`;
+Provide a brief, easy-to-understand explanation in ${targetLanguageName}:`;
 
-    const result = await model.generateContent(prompt);
+    const result = await model.generateContent(contextualPrompt);
     return result.response.text().trim();
   } catch (error) {
     console.error('AI explanation error:', error);
@@ -239,21 +269,29 @@ Provide a brief explanation in ${targetLanguageName}:`;
   }
 };
 
-// Add AI summarization function
-export const summarizeTextWithAI = async (text: string, language: string): Promise<string> => {
+// Enhanced AI summarization function with full context
+export const summarizeTextWithAI = async (text: string, language: string, fullTranscription?: string): Promise<string> => {
   try {
     const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
     const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
     
     const targetLanguageName = getLanguageName(language);
     
-    const prompt = `Summarize the following text in ${targetLanguageName}. Make it concise and capture the key points:
+    const contextualPrompt = fullTranscription 
+      ? `Given this full transcription context:
+"${fullTranscription}"
+
+Please summarize this specific part in ${targetLanguageName}:
+"${text}"
+
+Provide a concise, contextual summary in ${targetLanguageName}:`
+      : `Summarize the following text concisely in ${targetLanguageName}:
 
 "${text}"
 
-Provide a brief summary in ${targetLanguageName}:`;
+Provide a brief summary capturing the key points in ${targetLanguageName}:`;
 
-    const result = await model.generateContent(prompt);
+    const result = await model.generateContent(contextualPrompt);
     return result.response.text().trim();
   } catch (error) {
     console.error('AI summarization error:', error);
