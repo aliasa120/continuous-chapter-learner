@@ -1,4 +1,3 @@
-
 import Groq from 'groq-sdk';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
@@ -52,99 +51,87 @@ export const transcribeWithGroqAndGemini = async ({ file, language }: Transcript
     const groqSegments = parseGroqTranscription(transcription);
     console.log('✓ Parsed segments count:', groqSegments.length);
 
-    // Step 3: Check if translation is needed based on target language
+    // Step 3: Always translate using Gemini for consistent language output
     const targetLanguageName = getLanguageName(language);
-    
-    console.log('Target language requested:', targetLanguageName);
-
-    // If target language is English and we want English, return as-is
-    if (language === 'en') {
-      console.log('✓ Target language is English - checking if translation needed...');
-      // For English, we can return the original transcription
-      // But let's still translate to ensure consistency and proper formatting
-    }
-
-    // Step 4: Always translate using Gemini to ensure proper language output
     console.log('Step 2: Starting translation process to', targetLanguageName);
     
     const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
     const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
-    // Get the full transcription text for context
-    const fullTranscriptionText = groqSegments.map(segment => segment.text).join(' ');
+    // Enhanced translation with better segment-by-segment approach
+    const translatedSegments: TranscriptionLine[] = [];
+    
+    // Process segments in batches to maintain context while ensuring individual translation
+    const batchSize = 5; // Process 5 segments at a time for better context
+    
+    for (let i = 0; i < groqSegments.length; i += batchSize) {
+      const batch = groqSegments.slice(i, i + batchSize);
+      console.log(`Processing batch ${Math.floor(i/batchSize) + 1}/${Math.ceil(groqSegments.length/batchSize)}`);
+      
+      // Create numbered segments for this batch
+      const batchTexts = batch.map((segment, index) => 
+        `[${i + index + 1}] ${segment.text.trim()}`
+      ).join('\n');
 
-    // Create comprehensive translation prompt with better instructions
-    const segmentTexts = groqSegments.map((segment, index) => 
-      `[${index + 1}] ${segment.text.trim()}`
-    ).join('\n');
-
-    const translationPrompt = `You are a professional translator. Your task is to translate the following transcription segments to ${targetLanguageName}.
+      const translationPrompt = `You are a professional translator. Translate each numbered segment to ${targetLanguageName}.
 
 CRITICAL INSTRUCTIONS:
 1. Translate each numbered segment accurately to ${targetLanguageName}
-2. If the source is already in ${targetLanguageName}, improve clarity and grammar
+2. If the source is already in ${targetLanguageName}, improve clarity and grammar but keep the meaning
 3. Maintain the original meaning and context
-4. Return ONLY the translated text for each segment
-5. Keep the same numbering format: [1] translated text, [2] translated text, etc.
-6. Do not add explanations, notes, or commentary
-7. Preserve the natural flow and tone of speech
-8. For ${targetLanguageName} output, use proper ${targetLanguageName} script and vocabulary
+4. Return ONLY the translated text for each segment in the EXACT same numbering format
+5. Do not add explanations, notes, or commentary
+6. Preserve the natural flow and tone of speech
 
-Original transcription segments to translate to ${targetLanguageName}:
-${segmentTexts}
+Segments to translate to ${targetLanguageName}:
+${batchTexts}
 
-Translate all segments to ${targetLanguageName}:`;
+Translated segments in ${targetLanguageName}:`;
 
-    console.log('🔄 Sending translation request to Gemini...');
-    console.log('Translation prompt preview:', translationPrompt.substring(0, 200) + '...');
-    
-    const result = await model.generateContent(translationPrompt);
-    const translatedResponse = result.response.text().trim();
-    
-    console.log('✓ Gemini translation completed');
-    console.log('Translation response preview:', translatedResponse.substring(0, 200) + '...');
+      console.log(`🔄 Sending batch translation request to Gemini...`);
+      
+      const result = await model.generateContent(translationPrompt);
+      const translatedResponse = result.response.text().trim();
+      
+      console.log('✓ Batch translation completed');
+      console.log('Translation response:', translatedResponse);
 
-    // Parse translation response with improved error handling
-    const translatedLines = translatedResponse
-      .split('\n')
-      .filter(line => line.trim())
-      .map(line => {
-        // Remove numbering like [1], [2], etc.
-        return line.replace(/^\[\d+\]\s*/, '').trim();
+      // Parse batch translation response
+      const translatedLines = translatedResponse
+        .split('\n')
+        .filter(line => line.trim())
+        .map(line => {
+          // Remove numbering like [1], [2], etc.
+          return line.replace(/^\[\d+\]\s*/, '').trim();
+        });
+      
+      console.log('✓ Parsed translated lines for batch:', translatedLines.length);
+
+      // Map translations back to segments for this batch
+      batch.forEach((segment, batchIndex) => {
+        const translatedText = translatedLines[batchIndex]?.trim() || segment.text;
+        
+        console.log(`Segment ${i + batchIndex + 1}:`);
+        console.log(`  Original: "${segment.text}"`);
+        console.log(`  Translated (${targetLanguageName}): "${translatedText}"`);
+        
+        translatedSegments.push({
+          ...segment,
+          text: translatedText,
+        });
       });
-    
-    console.log('✓ Parsed translated lines count:', translatedLines.length);
-    console.log('✓ Original segments count:', groqSegments.length);
-
-    // Verify translation count matches original
-    if (translatedLines.length !== groqSegments.length) {
-      console.warn('⚠️ Translation count mismatch. Using fallback strategy...');
-      // Fallback: pad with original text if needed
-      while (translatedLines.length < groqSegments.length) {
-        const missingIndex = translatedLines.length;
-        translatedLines.push(groqSegments[missingIndex]?.text || '');
-      }
     }
 
-    // Map translations back to segments with verification
-    const finalSegments = groqSegments.map((segment, index) => {
-      const translatedText = translatedLines[index]?.trim() || segment.text;
-      
-      console.log(`Segment ${index + 1}:`);
-      console.log(`  Original: "${segment.text}"`);
-      console.log(`  Translated (${targetLanguageName}): "${translatedText}"`);
-      
-      return {
-        ...segment,
-        text: translatedText,
-      };
-    });
-
-    console.log('✓ Translation mapping complete');
-    console.log('✓ Final segments count:', finalSegments.length);
+    console.log('✓ All translation batches completed');
+    console.log('✓ Final segments count:', translatedSegments.length);
     console.log('=== TRANSCRIPTION PROCESS COMPLETED SUCCESSFULLY ===');
     
-    return finalSegments;
+    // Verify all segments are properly translated
+    translatedSegments.forEach((segment, index) => {
+      console.log(`Final segment ${index + 1}: "${segment.text}"`);
+    });
+    
+    return translatedSegments;
   } catch (error) {
     console.error('❌ Transcription error:', error);
     throw new Error('Transcription failed. Please check your API keys and try again.');
