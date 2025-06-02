@@ -1,3 +1,4 @@
+
 import Groq from 'groq-sdk';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
@@ -25,7 +26,7 @@ const GEMINI_API_KEY = 'AIzaSyDcvqkBlNTX1mhT6y7e-BK6Ix-AdCbR95A';
 
 export const transcribeWithGroqAndGemini = async ({ file, language }: TranscriptionOptions): Promise<TranscriptionLine[]> => {
   try {
-    console.log('Starting transcription with Groq + Gemini');
+    console.log('=== STARTING TRANSCRIPTION PROCESS ===');
     console.log('Target language:', language, 'File:', file.name);
     
     // Step 1: Use Groq for initial transcription in original language
@@ -34,7 +35,7 @@ export const transcribeWithGroqAndGemini = async ({ file, language }: Transcript
       dangerouslyAllowBrowser: true,
     });
 
-    console.log('Step 1: Transcribing with Groq Whisper-large-v3-turbo...');
+    console.log('Step 1: Transcribing with Groq Whisper...');
     
     const transcription = await groq.audio.transcriptions.create({
       file: file,
@@ -44,59 +45,83 @@ export const transcribeWithGroqAndGemini = async ({ file, language }: Transcript
       temperature: 0.0,
     });
 
-    console.log('Groq transcription completed:', transcription);
+    console.log('✓ Groq transcription completed:', transcription);
 
     // Step 2: Parse Groq response and extract segments with word-level timestamps
     const groqSegments = parseGroqTranscription(transcription);
-    console.log('Parsed Groq segments:', groqSegments.length);
+    console.log('✓ Parsed Groq segments:', groqSegments.length);
 
     // Step 3: If target language is English, return as-is
     if (language === 'en') {
-      console.log('Target language is English, skipping translation');
+      console.log('✓ Target language is English, returning original transcription');
       return groqSegments;
     }
 
     // Step 4: Use Gemini for translation to target language
-    console.log('Step 2: Translating segments with Gemini to', getLanguageName(language));
+    console.log('Step 2: Translating ALL segments to target language:', getLanguageName(language));
     
     const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
     const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
-    const targetLanguage = getLanguageName(language);
-    console.log('Translating each segment to:', targetLanguage);
+    const targetLanguageName = getLanguageName(language);
+    console.log('🔄 Starting translation process for', groqSegments.length, 'segments to:', targetLanguageName);
 
-    // Translate each segment individually while preserving timestamps
-    const translatedSegments = await Promise.all(
-      groqSegments.map(async (segment, index) => {
-        try {
-          // Create a focused translation prompt for each segment
-          const segmentPrompt = `Translate the following text to ${targetLanguage}. 
-IMPORTANT: Only provide the direct translation, no explanations or additional text.
-Text to translate: "${segment.text}"`;
+    // Create a comprehensive translation prompt with all segments
+    const allSegmentTexts = groqSegments.map((segment, index) => 
+      `Segment ${index + 1}: "${segment.text}"`
+    ).join('\n');
 
-          console.log(`Translating segment ${index + 1}/${groqSegments.length}: "${segment.text}" to ${targetLanguage}`);
-          
-          const result = await model.generateContent(segmentPrompt);
-          const translatedText = result.response.text().trim();
-          
-          console.log(`Segment ${index + 1} translation result: "${translatedText}"`);
-          
-          return {
-            ...segment,
-            text: translatedText || segment.text, // Fallback to original if translation fails
-          };
-        } catch (error) {
-          console.error(`Translation failed for segment ${index + 1}:`, error);
-          return segment; // Return original segment if translation fails
-        }
-      })
-    );
+    const comprehensivePrompt = `You are a professional translator. Translate ALL the following text segments from their original language to ${targetLanguageName}.
 
-    console.log('All segments translated successfully:', translatedSegments.length);
+CRITICAL INSTRUCTIONS:
+1. Translate each segment accurately to ${targetLanguageName}
+2. Maintain the same meaning and context
+3. Return ONLY the translated text for each segment, one per line
+4. Do not add explanations, notes, or extra text
+5. Keep the same number of segments as input
+
+Original segments to translate:
+${allSegmentTexts}
+
+Expected format:
+Segment 1 translation
+Segment 2 translation
+...and so on
+
+Translate to: ${targetLanguageName}`;
+
+    console.log('🔄 Sending comprehensive translation request to Gemini...');
     
-    return translatedSegments;
+    const result = await model.generateContent(comprehensivePrompt);
+    const translatedResponse = result.response.text().trim();
+    
+    console.log('✓ Gemini translation response received:', translatedResponse);
+
+    // Parse the translated response
+    const translatedLines = translatedResponse.split('\n').filter(line => line.trim());
+    
+    console.log('✓ Parsed translated lines:', translatedLines.length);
+
+    // Map translations back to segments
+    const finalSegments = groqSegments.map((segment, index) => {
+      const translatedText = translatedLines[index]?.trim() || segment.text;
+      
+      console.log(`Mapping segment ${index + 1}:`);
+      console.log(`  Original: "${segment.text}"`);
+      console.log(`  Translated: "${translatedText}"`);
+      
+      return {
+        ...segment,
+        text: translatedText,
+      };
+    });
+
+    console.log('✓ Final translation complete. All segments processed:', finalSegments.length);
+    console.log('=== TRANSCRIPTION PROCESS COMPLETE ===');
+    
+    return finalSegments;
   } catch (error) {
-    console.error('Transcription error:', error);
+    console.error('❌ Transcription error:', error);
     throw new Error('Transcription failed. Please check your API keys and try again.');
   }
 };
