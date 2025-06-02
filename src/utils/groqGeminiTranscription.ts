@@ -1,4 +1,3 @@
-
 import Groq from 'groq-sdk';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
@@ -21,7 +20,7 @@ export interface TranscriptionOptions {
 }
 
 // Environment variables - these should be set in your deployment environment
-const GROQ_API_KEY = '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';
+const GROQ_API_KEY = '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';
 const GEMINI_API_KEY = 'AIzaSyDcvqkBlNTX1mhT6y7e-BK6Ix-AdCbR95A';
 
 export const transcribeWithGroqAndGemini = async ({ file, language }: TranscriptionOptions): Promise<TranscriptionLine[]> => {
@@ -46,47 +45,51 @@ export const transcribeWithGroqAndGemini = async ({ file, language }: Transcript
     });
 
     console.log('✓ Groq transcription completed successfully');
-    console.log('Original transcription language detected:', transcription.language);
+    console.log('Transcription result:', transcription);
 
     // Step 2: Parse Groq response and extract segments with word-level timestamps
     const groqSegments = parseGroqTranscription(transcription);
     console.log('✓ Parsed segments count:', groqSegments.length);
 
-    // Step 3: Check if translation is needed
-    const originalLanguage = transcription.language || 'unknown';
+    // Step 3: Check if translation is needed based on target language
     const targetLanguageName = getLanguageName(language);
     
-    console.log('Original language detected:', originalLanguage);
     console.log('Target language requested:', targetLanguageName);
 
-    // If target language is the same as original, return as-is
-    if (language === 'en' && originalLanguage === 'english') {
-      console.log('✓ No translation needed - both languages are English');
-      return groqSegments;
+    // If target language is English and we want English, return as-is
+    if (language === 'en') {
+      console.log('✓ Target language is English - checking if translation needed...');
+      // For English, we can return the original transcription
+      // But let's still translate to ensure consistency and proper formatting
     }
 
-    // Step 4: Translate using Gemini with improved strategy
-    console.log('Step 2: Starting translation process...');
+    // Step 4: Always translate using Gemini to ensure proper language output
+    console.log('Step 2: Starting translation process to', targetLanguageName);
     
     const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
     const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
-    // Create comprehensive translation prompt
+    // Get the full transcription text for context
+    const fullTranscriptionText = groqSegments.map(segment => segment.text).join(' ');
+
+    // Create comprehensive translation prompt with better instructions
     const segmentTexts = groqSegments.map((segment, index) => 
       `[${index + 1}] ${segment.text.trim()}`
     ).join('\n');
 
-    const translationPrompt = `You are a professional translator. Your task is to translate the following transcription segments from ${originalLanguage} to ${targetLanguageName}.
+    const translationPrompt = `You are a professional translator. Your task is to translate the following transcription segments to ${targetLanguageName}.
 
 CRITICAL INSTRUCTIONS:
 1. Translate each numbered segment accurately to ${targetLanguageName}
-2. Maintain the original meaning and context
-3. Return ONLY the translated text for each segment
-4. Keep the same numbering format: [1] translated text, [2] translated text, etc.
-5. Do not add explanations, notes, or commentary
-6. Preserve the natural flow and tone of speech
+2. If the source is already in ${targetLanguageName}, improve clarity and grammar
+3. Maintain the original meaning and context
+4. Return ONLY the translated text for each segment
+5. Keep the same numbering format: [1] translated text, [2] translated text, etc.
+6. Do not add explanations, notes, or commentary
+7. Preserve the natural flow and tone of speech
+8. For ${targetLanguageName} output, use proper ${targetLanguageName} script and vocabulary
 
-Original transcription segments to translate:
+Original transcription segments to translate to ${targetLanguageName}:
 ${segmentTexts}
 
 Translate all segments to ${targetLanguageName}:`;
@@ -127,7 +130,7 @@ Translate all segments to ${targetLanguageName}:`;
       const translatedText = translatedLines[index]?.trim() || segment.text;
       
       console.log(`Segment ${index + 1}:`);
-      console.log(`  Original (${originalLanguage}): "${segment.text}"`);
+      console.log(`  Original: "${segment.text}"`);
       console.log(`  Translated (${targetLanguageName}): "${translatedText}"`);
       
       return {
