@@ -1,4 +1,3 @@
-
 import Groq from 'groq-sdk';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
@@ -21,7 +20,7 @@ export interface TranscriptionOptions {
 }
 
 // Environment variables - these should be set in your deployment environment
-const GROQ_API_KEY = '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';
+const GROQ_API_KEY = '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';
 const GEMINI_API_KEY = 'AIzaSyDcvqkBlNTX1mhT6y7e-BK6Ix-AdCbR95A';
 
 export const transcribeWithGroqAndGemini = async ({ file, language }: TranscriptionOptions): Promise<TranscriptionLine[]> => {
@@ -216,4 +215,48 @@ const formatTime = (seconds: number): string => {
   const mins = Math.floor(seconds / 60);
   const secs = Math.floor(seconds % 60);
   return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+};
+
+// Add AI explanation function
+export const explainTextWithAI = async (text: string, language: string): Promise<string> => {
+  try {
+    const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    
+    const targetLanguageName = getLanguageName(language);
+    
+    const prompt = `Explain the following text in a simple, clear way in ${targetLanguageName}. Keep it concise and easy to understand:
+
+"${text}"
+
+Provide a brief explanation in ${targetLanguageName}:`;
+
+    const result = await model.generateContent(prompt);
+    return result.response.text().trim();
+  } catch (error) {
+    console.error('AI explanation error:', error);
+    throw new Error('Failed to generate explanation');
+  }
+};
+
+// Add AI summarization function
+export const summarizeTextWithAI = async (text: string, language: string): Promise<string> => {
+  try {
+    const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    
+    const targetLanguageName = getLanguageName(language);
+    
+    const prompt = `Summarize the following text in ${targetLanguageName}. Make it concise and capture the key points:
+
+"${text}"
+
+Provide a brief summary in ${targetLanguageName}:`;
+
+    const result = await model.generateContent(prompt);
+    return result.response.text().trim();
+  } catch (error) {
+    console.error('AI summarization error:', error);
+    throw new Error('Failed to generate summary');
+  }
 };

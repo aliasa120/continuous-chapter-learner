@@ -1,9 +1,9 @@
-
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Clipboard, ClipboardCheck, Play, Pause, Clock } from 'lucide-react';
 import type { TranscriptionLine } from '../utils/groqGeminiTranscription';
+import AIActionButtons from './AIActionButtons';
 
 interface TranscriptionResultProps {
   transcriptionLines: TranscriptionLine[];
@@ -13,6 +13,7 @@ interface TranscriptionResultProps {
   isPlaying: boolean;
   onPlayPause: () => void;
   showTimestamps?: boolean;
+  language?: string;
 }
 
 const TranscriptionResult: React.FC<TranscriptionResultProps> = ({
@@ -22,9 +23,12 @@ const TranscriptionResult: React.FC<TranscriptionResultProps> = ({
   seekToTimestamp,
   isPlaying,
   onPlayPause,
-  showTimestamps = true
+  showTimestamps = true,
+  language = 'en'
 }) => {
   const [copied, setCopied] = React.useState(false);
+  const [expandedCards, setExpandedCards] = React.useState<Set<number>>(new Set());
+  const [expandedEssay, setExpandedEssay] = React.useState(false);
   const activeLineRef = React.useRef<HTMLDivElement>(null);
 
   const copyToClipboard = () => {
@@ -50,11 +54,21 @@ const TranscriptionResult: React.FC<TranscriptionResultProps> = ({
   };
 
   const getConfidenceIndicator = (confidence?: number) => {
-    if (!confidence) return '⚪'; // Gray for unknown
-    if (confidence >= 90) return '🟢'; // Green for excellent
-    if (confidence >= 75) return '🟡'; // Yellow for good
-    if (confidence >= 60) return '🟠'; // Orange for moderate
-    return '🔴'; // Red for poor
+    if (!confidence) return <span className="w-2 h-2 rounded-full bg-gray-400" title="Unknown"></span>;
+    if (confidence >= 90) return <span className="w-2 h-2 rounded-full bg-green-500" title="Excellent"></span>;
+    if (confidence >= 75) return <span className="w-2 h-2 rounded-full bg-yellow-500" title="Good"></span>;
+    if (confidence >= 60) return <span className="w-2 h-2 rounded-full bg-orange-500" title="Moderate"></span>;
+    return <span className="w-2 h-2 rounded-full bg-red-500" title="Poor"></span>;
+  };
+
+  const toggleCardExpansion = (index: number) => {
+    const newExpanded = new Set(expandedCards);
+    if (newExpanded.has(index)) {
+      newExpanded.delete(index);
+    } else {
+      newExpanded.add(index);
+    }
+    setExpandedCards(newExpanded);
   };
 
   // Enhanced auto-scroll with improved synchronization
@@ -106,6 +120,8 @@ const TranscriptionResult: React.FC<TranscriptionResultProps> = ({
 
   // Essay view (without timestamps)
   if (!showTimestamps) {
+    const fullText = transcriptionLines.map(line => line.text).join(' ');
+    
     return (
       <div className="flex flex-col h-60 sm:h-96">
         {/* Controls Bar for Essay View */}
@@ -131,32 +147,45 @@ const TranscriptionResult: React.FC<TranscriptionResultProps> = ({
           </Button>
         </div>
         
-        {/* Essay Text View */}
+        {/* Essay Text View with AI Actions */}
         <ScrollArea className="flex-1 p-3 sm:p-4">
-          <div className="prose prose-sm sm:prose max-w-none">
-            <p className="text-sm sm:text-base leading-relaxed text-gray-900">
-              {transcriptionLines.map((line, index) => (
-                <span
-                  key={index}
-                  className={`transition-all duration-200 ${
-                    currentTime >= line.startTime && currentTime <= line.endTime
-                      ? 'bg-yellow-200 font-medium px-1 rounded'
-                      : ''
-                  }`}
-                  onClick={() => seekToTimestamp(line.startTime)}
-                  style={{ cursor: 'pointer' }}
-                >
-                  {line.text}{index < transcriptionLines.length - 1 ? ' ' : ''}
-                </span>
-              ))}
-            </p>
+          <div className="space-y-4">
+            <div className="prose prose-sm sm:prose max-w-none">
+              <p className="text-sm sm:text-base leading-relaxed text-gray-900">
+                {transcriptionLines.map((line, index) => (
+                  <span
+                    key={index}
+                    className={`transition-all duration-200 ${
+                      currentTime >= line.startTime && currentTime <= line.endTime
+                        ? 'bg-yellow-200 font-medium px-1 rounded'
+                        : ''
+                    }`}
+                    onClick={() => seekToTimestamp(line.startTime)}
+                    style={{ cursor: 'pointer' }}
+                  >
+                    {line.text}{index < transcriptionLines.length - 1 ? ' ' : ''}
+                  </span>
+                ))}
+              </p>
+            </div>
+            
+            {/* AI Actions for Essay View */}
+            <div className="border-t pt-4">
+              <AIActionButtons
+                text={fullText}
+                language={language}
+                onExpand={() => setExpandedEssay(!expandedEssay)}
+                isExpanded={expandedEssay}
+                className="max-w-md"
+              />
+            </div>
           </div>
         </ScrollArea>
       </div>
     );
   }
 
-  // Timestamp view (original format)
+  // Timestamp view (original format with AI actions)
   return (
     <div className="flex flex-col h-60 sm:h-96">
       {/* Enhanced Controls Bar */}
@@ -188,21 +217,22 @@ const TranscriptionResult: React.FC<TranscriptionResultProps> = ({
         </Button>
       </div>
       
-      {/* Enhanced Transcription Lines */}
+      {/* Enhanced Transcription Lines with AI Actions */}
       <ScrollArea className="flex-1 p-2 sm:p-3">
         <div className="space-y-2 sm:space-y-3">
           {transcriptionLines.map((line, index) => {
             const isActive = currentTime >= line.startTime && currentTime <= line.endTime;
+            const isExpanded = expandedCards.has(index);
             
             return (
               <div 
                 key={index}
                 ref={isActive ? activeLineRef : null}
-                className={`rounded-lg border p-3 sm:p-4 transition-all duration-300 cursor-pointer relative ${
+                className={`rounded-lg border transition-all duration-300 cursor-pointer relative ${
                   isActive 
                     ? 'border-green-500 shadow-lg bg-green-50 ring-2 ring-green-200 transform scale-[1.02] z-10' 
                     : 'border-gray-200 hover:border-green-300 bg-white hover:shadow-sm'
-                }`}
+                } ${isExpanded ? 'p-4 sm:p-6' : 'p-3 sm:p-4'}`}
                 onClick={() => seekToTimestamp(line.startTime)}
               >
                 {/* Individual Play Button */}
@@ -236,14 +266,14 @@ const TranscriptionResult: React.FC<TranscriptionResultProps> = ({
                         <div className={`flex items-center gap-1 text-xs px-1.5 sm:px-2 py-0.5 sm:py-1 rounded ${
                           isActive ? 'bg-gray-200' : 'bg-gray-100'
                         }`}>
-                          <span>{getConfidenceIndicator(line.confidence)}</span>
+                          {getConfidenceIndicator(line.confidence)}
                         </div>
                       )}
                     </div>
                   </div>
                   
                   {/* Text Content */}
-                  <p className={`text-gray-900 text-xs sm:text-base leading-relaxed transition-all ${
+                  <p className={`text-gray-900 text-xs sm:text-base leading-relaxed transition-all mb-3 ${
                     isActive ? 'font-medium text-green-900' : ''
                   }`}>
                     {line.words && line.words.length > 0 ? (
@@ -263,6 +293,14 @@ const TranscriptionResult: React.FC<TranscriptionResultProps> = ({
                       <span>{line.text}</span>
                     )}
                   </p>
+
+                  {/* AI Action Buttons */}
+                  <AIActionButtons
+                    text={line.text}
+                    language={language}
+                    onExpand={() => toggleCardExpansion(index)}
+                    isExpanded={isExpanded}
+                  />
                   
                   {/* Progress bar for active line */}
                   {isActive && (

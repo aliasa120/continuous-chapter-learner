@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import FileUpload from '../components/FileUpload';
@@ -323,12 +322,13 @@ const TranscribePage = () => {
                 isPlaying={isPlaying}
                 onPlayPause={handlePlayPause}
                 showTimestamps={showTimestamps}
+                language={language}
               />
             </div>
           </div>
           
           <div className="mt-2 sm:mt-6 text-center text-xs text-gray-500 bg-green-50 p-2 sm:p-4 rounded-lg border border-green-100">
-            🎯 Multi-language AI • Speaker Detection • Precise Sync
+            🎯 Multi-language AI • AI Explanations • Precise Sync
           </div>
         </div>
       </div>
