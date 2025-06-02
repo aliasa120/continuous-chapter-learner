@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -231,14 +230,13 @@ const TranscriptionResult: React.FC<TranscriptionResultProps> = ({
               <div 
                 key={index}
                 ref={isActive ? activeLineRef : null}
-                className={`rounded-lg border transition-all duration-300 cursor-pointer relative ${
+                className={`rounded-lg border transition-all duration-300 relative ${
                   isActive 
                     ? 'border-green-500 shadow-lg bg-green-50 ring-2 ring-green-200 transform scale-[1.02] z-10' 
                     : 'border-gray-200 hover:border-green-300 bg-white hover:shadow-sm'
                 } ${isExpanded ? 'p-4 sm:p-6' : 'p-3 sm:p-4'}`}
-                onClick={() => seekToTimestamp(line.startTime)}
               >
-                {/* Individual Play Button */}
+                {/* Individual Play Button - Only this controls playback */}
                 <Button 
                   variant="outline" 
                   size="sm" 

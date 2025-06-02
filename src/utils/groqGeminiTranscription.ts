@@ -1,3 +1,4 @@
+
 import Groq from 'groq-sdk';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
@@ -20,7 +21,7 @@ export interface TranscriptionOptions {
 }
 
 // Environment variables - these should be set in your deployment environment
-const GROQ_API_KEY = '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';
+const GROQ_API_KEY = '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';
 const GEMINI_API_KEY = 'AIzaSyDcvqkBlNTX1mhT6y7e-BK6Ix-AdCbR95A';
 
 export const transcribeWithGroqAndGemini = async ({ file, language }: TranscriptionOptions): Promise<TranscriptionLine[]> => {
