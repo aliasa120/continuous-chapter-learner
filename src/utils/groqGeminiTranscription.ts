@@ -61,9 +61,9 @@ export const transcribeWithGroqAndGemini = async ({ file, language }: Transcript
     console.log('Original segments count:', originalSegments.length);
     console.log('First few segments:', originalSegments.slice(0, 3));
     
-    // If target language is same as detected, return original segments
-    if (language === 'en' && transcription.language === 'english') {
-      console.log('Target language matches original, returning original segments');
+    // If target language is English, return original segments
+    if (language === 'en') {
+      console.log('Target language is English, returning original segments');
       return originalSegments;
     }
     
