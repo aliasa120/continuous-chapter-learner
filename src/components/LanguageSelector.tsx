@@ -22,16 +22,18 @@ const LanguageSelector: React.FC<LanguageSelectorProps> = ({ language, setLangua
 
   const languages = [
     { value: "en", label: "English" },
+    { value: "ur", label: "Urdu" },
+    { value: "hi", label: "Hindi" },
+    { value: "ar", label: "Arabic" },
+    { value: "bn", label: "Bengali" },
     { value: "af", label: "Afrikaans" },
     { value: "sq", label: "Albanian" },
     { value: "am", label: "Amharic" },
-    { value: "ar", label: "Arabic" },
     { value: "hy", label: "Armenian" },
     { value: "as", label: "Assamese" },
     { value: "az", label: "Azerbaijani" },
     { value: "eu", label: "Basque" },
     { value: "be", label: "Belarusian" },
-    { value: "bn", label: "Bengali" },
     { value: "bs", label: "Bosnian" },
     { value: "bg", label: "Bulgarian" },
     { value: "ca", label: "Catalan" },
@@ -56,8 +58,7 @@ const LanguageSelector: React.FC<LanguageSelectorProps> = ({ language, setLangua
     { value: "ht", label: "Haitian Creole" },
     { value: "ha", label: "Hausa" },
     { value: "haw", label: "Hawaiian" },
-    { value: "iw", label: "Hebrew" },
-    { value: "hi", label: "Hindi" },
+    { value: "he", label: "Hebrew" },
     { value: "hmn", label: "Hmong" },
     { value: "hu", label: "Hungarian" },
     { value: "is", label: "Icelandic" },
@@ -120,7 +121,6 @@ const LanguageSelector: React.FC<LanguageSelectorProps> = ({ language, setLangua
     { value: "th", label: "Thai" },
     { value: "tr", label: "Turkish" },
     { value: "uk", label: "Ukrainian" },
-    { value: "ur", label: "Urdu" },
   ];
 
   // Filter languages based on search term
@@ -141,20 +141,32 @@ const LanguageSelector: React.FC<LanguageSelectorProps> = ({ language, setLangua
     }
   }, [isOpen]);
 
-  // Handle search input changes with better focus management
+  // Handle search input changes - prevent event bubbling
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     e.stopPropagation();
+    e.preventDefault();
     setSearchTerm(e.target.value);
   };
 
-  // Handle search input key events
+  // Handle search input key events - prevent dropdown interference
   const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     e.stopPropagation();
-    // Prevent the select dropdown from closing when typing
-    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
-      // Allow arrow navigation in the dropdown
-      return;
+    // Only allow typing characters and navigation
+    if (e.key === 'Escape') {
+      setIsOpen(false);
     }
+  };
+
+  // Handle input focus - maintain focus
+  const handleSearchFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+    e.stopPropagation();
+    e.preventDefault();
+  };
+
+  // Handle input click - prevent dropdown close
+  const handleSearchClick = (e: React.MouseEvent<HTMLInputElement>) => {
+    e.stopPropagation();
+    e.preventDefault();
   };
 
   return (
@@ -175,7 +187,7 @@ const LanguageSelector: React.FC<LanguageSelectorProps> = ({ language, setLangua
             </SelectValue>
           </SelectTrigger>
           <SelectContent className="bg-white border-gray-200 max-h-80">
-            <div className="sticky top-0 z-10 bg-white border-b border-gray-200 p-2">
+            <div className="sticky top-0 z-50 bg-white border-b border-gray-200 p-2">
               <div className="relative">
                 <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <Input
@@ -184,10 +196,11 @@ const LanguageSelector: React.FC<LanguageSelectorProps> = ({ language, setLangua
                   value={searchTerm}
                   onChange={handleSearchChange}
                   onKeyDown={handleSearchKeyDown}
-                  onClick={(e) => e.stopPropagation()}
-                  onFocus={(e) => e.stopPropagation()}
+                  onFocus={handleSearchFocus}
+                  onClick={handleSearchClick}
                   className="pl-8 text-sm border-gray-200 focus:ring-green-400 focus:border-green-400"
                   autoComplete="off"
+                  tabIndex={0}
                 />
               </div>
             </div>
