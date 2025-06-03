@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -103,7 +102,7 @@ const TranscriptionResult: React.FC<TranscriptionResultProps> = ({
           <div className="text-center">
             <div className="w-8 h-8 sm:w-16 sm:h-16 mx-auto border-4 rounded-full border-l-green-600 border-r-green-300 border-b-green-600 border-t-green-300 animate-spin mb-4"></div>
             <p className="text-gray-900 animate-pulse text-sm font-semibold">AI Processing...</p>
-            <p className="text-xs text-gray-600 mt-2 hidden sm:block">Enhanced word sync • Precise timing</p>
+            <p className="text-xs text-gray-600 mt-2 hidden sm:block">Word-level sync • Precise timing</p>
           </div>
         </div>
       </div>
@@ -149,7 +148,7 @@ const TranscriptionResult: React.FC<TranscriptionResultProps> = ({
           </Button>
         </div>
         
-        {/* Essay Text View with Enhanced Word Highlighting */}
+        {/* Essay Text View with AI Actions */}
         <ScrollArea className="flex-1 p-3 sm:p-4">
           <div className="space-y-4">
             <div className="prose prose-sm sm:prose max-w-none">
@@ -159,35 +158,19 @@ const TranscriptionResult: React.FC<TranscriptionResultProps> = ({
                     key={index}
                     className={`transition-all duration-200 ${
                       currentTime >= line.startTime && currentTime <= line.endTime
-                        ? 'bg-yellow-200 font-semibold px-1 rounded shadow-sm'
+                        ? 'bg-yellow-200 font-medium px-1 rounded'
                         : ''
                     }`}
                     onClick={() => seekToTimestamp(line.startTime)}
                     style={{ cursor: 'pointer' }}
                   >
-                    {line.words && line.words.length > 0 ? (
-                      line.words.map((word, wordIndex) => (
-                        <span
-                          key={`${index}-${wordIndex}`}
-                          className={`transition-all duration-150 ${
-                            currentTime >= word.start && currentTime <= word.end
-                              ? 'bg-yellow-400 text-gray-900 font-bold px-1 rounded-sm scale-105 inline-block'
-                              : ''
-                          }`}
-                        >
-                          {word.word}{' '}
-                        </span>
-                      ))
-                    ) : (
-                      <span>{line.text}</span>
-                    )}
-                    {index < transcriptionLines.length - 1 ? ' ' : ''}
+                    {line.text}{index < transcriptionLines.length - 1 ? ' ' : ''}
                   </span>
                 ))}
               </p>
             </div>
             
-            {/* AI Actions for Essay View */}
+            {/* AI Actions for Essay View with Full Context */}
             <div className="border-t pt-4">
               <AIActionButtons
                 text={fullTranscription}
@@ -204,7 +187,7 @@ const TranscriptionResult: React.FC<TranscriptionResultProps> = ({
     );
   }
 
-  // Timestamp view with enhanced word synchronization
+  // Timestamp view (original format with AI actions)
   return (
     <div className="flex flex-col h-60 sm:h-96">
       {/* Enhanced Controls Bar */}
@@ -236,7 +219,7 @@ const TranscriptionResult: React.FC<TranscriptionResultProps> = ({
         </Button>
       </div>
       
-      {/* Enhanced Transcription Lines with Stronger Word Sync */}
+      {/* Enhanced Transcription Lines with AI Actions */}
       <ScrollArea className="flex-1 p-2 sm:p-3">
         <div className="space-y-2 sm:space-y-3">
           {transcriptionLines.map((line, index) => {
@@ -249,17 +232,17 @@ const TranscriptionResult: React.FC<TranscriptionResultProps> = ({
                 ref={isActive ? activeLineRef : null}
                 className={`rounded-lg border transition-all duration-300 relative ${
                   isActive 
-                    ? 'border-green-500 shadow-xl bg-gradient-to-r from-green-50 to-emerald-50 ring-2 ring-green-200 transform scale-[1.02] z-10' 
+                    ? 'border-green-500 shadow-lg bg-green-50 ring-2 ring-green-200 transform scale-[1.02] z-10' 
                     : 'border-gray-200 hover:border-green-300 bg-white hover:shadow-sm'
                 } ${isExpanded ? 'p-4 sm:p-6' : 'p-3 sm:p-4'}`}
               >
-                {/* Play Button */}
+                {/* Individual Play Button - Only this controls playback */}
                 <Button 
                   variant="outline" 
                   size="sm" 
                   className={`absolute top-2 right-2 h-6 w-6 sm:h-8 sm:w-8 p-0 rounded-full transition-all ${
                     isActive 
-                      ? 'text-green-800 border-green-600 bg-green-200 shadow-md' 
+                      ? 'text-green-800 border-green-600 bg-green-200' 
                       : 'hover:text-green-700 text-gray-500 border-gray-300'
                   }`}
                   onClick={(e) => {
@@ -275,7 +258,7 @@ const TranscriptionResult: React.FC<TranscriptionResultProps> = ({
                   <div className="flex items-center justify-between mb-2 sm:mb-3">
                     <div className="flex items-center gap-1 sm:gap-2 flex-wrap">
                       <span className={`text-xs font-mono px-1.5 sm:px-2 py-0.5 sm:py-1 rounded flex items-center gap-1 ${
-                        isActive ? 'text-green-800 bg-green-200 font-semibold' : 'text-green-700 bg-green-100'
+                        isActive ? 'text-green-800 bg-green-200' : 'text-green-700 bg-green-100'
                       }`}>
                         <Clock className="h-2 w-2 sm:h-3 sm:w-3" />
                         {line.timestamp}
@@ -290,7 +273,7 @@ const TranscriptionResult: React.FC<TranscriptionResultProps> = ({
                     </div>
                   </div>
                   
-                  {/* Enhanced Text Content with Stronger Word Highlighting */}
+                  {/* Text Content */}
                   <p className={`text-gray-900 text-xs sm:text-base leading-relaxed transition-all mb-3 ${
                     isActive ? 'font-medium text-green-900' : ''
                   }`}>
@@ -298,14 +281,11 @@ const TranscriptionResult: React.FC<TranscriptionResultProps> = ({
                       line.words.map((word, wordIndex) => (
                         <span
                           key={wordIndex}
-                          className={`transition-all duration-150 ${
+                          className={`transition-all duration-200 ${
                             currentTime >= word.start && currentTime <= word.end
-                              ? 'bg-yellow-400 text-gray-900 font-bold px-1 sm:px-2 rounded-md shadow-sm scale-110 inline-block transform'
-                              : isActive
-                              ? 'hover:bg-yellow-100 cursor-pointer'
+                              ? 'bg-yellow-300 text-gray-900 font-semibold px-0.5 sm:px-1 rounded'
                               : ''
                           }`}
-                          onClick={() => seekToTimestamp(word.start)}
                         >
                           {word.word}{' '}
                         </span>
@@ -315,7 +295,7 @@ const TranscriptionResult: React.FC<TranscriptionResultProps> = ({
                     )}
                   </p>
 
-                  {/* AI Action Buttons */}
+                  {/* AI Action Buttons with Full Context */}
                   <AIActionButtons
                     text={line.text}
                     language={language}
@@ -324,11 +304,11 @@ const TranscriptionResult: React.FC<TranscriptionResultProps> = ({
                     isExpanded={isExpanded}
                   />
                   
-                  {/* Enhanced Progress bar for active line */}
+                  {/* Progress bar for active line */}
                   {isActive && (
-                    <div className="mt-2 sm:mt-4 bg-green-200 rounded-full h-2 sm:h-3 overflow-hidden shadow-inner">
+                    <div className="mt-2 sm:mt-4 bg-green-200 rounded-full h-1.5 sm:h-2 overflow-hidden">
                       <div 
-                        className="bg-gradient-to-r from-green-500 to-green-600 h-full transition-all duration-200 shadow-sm"
+                        className="bg-gradient-to-r from-green-500 to-green-600 h-full transition-all duration-200"
                         style={{
                           width: `${Math.min(100, Math.max(0, ((currentTime - line.startTime) / (line.endTime - line.startTime)) * 100))}%`
                         }}
