@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   Select,
   SelectContent,
@@ -17,6 +17,8 @@ interface LanguageSelectorProps {
 
 const LanguageSelector: React.FC<LanguageSelectorProps> = ({ language, setLanguage }) => {
   const [searchTerm, setSearchTerm] = useState('');
+  const [isOpen, setIsOpen] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   const languages = [
     { value: "en", label: "English" },
@@ -129,6 +131,32 @@ const LanguageSelector: React.FC<LanguageSelectorProps> = ({ language, setLangua
 
   const selectedLanguage = languages.find(lang => lang.value === language);
 
+  // Focus search input when dropdown opens
+  useEffect(() => {
+    if (isOpen && searchInputRef.current) {
+      // Small delay to ensure the element is rendered
+      setTimeout(() => {
+        searchInputRef.current?.focus();
+      }, 100);
+    }
+  }, [isOpen]);
+
+  // Handle search input changes with better focus management
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    e.stopPropagation();
+    setSearchTerm(e.target.value);
+  };
+
+  // Handle search input key events
+  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    e.stopPropagation();
+    // Prevent the select dropdown from closing when typing
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      // Allow arrow navigation in the dropdown
+      return;
+    }
+  };
+
   return (
     <div className="space-y-1">
       <label className="block text-sm font-medium mb-1 text-green-100">
@@ -136,7 +164,11 @@ const LanguageSelector: React.FC<LanguageSelectorProps> = ({ language, setLangua
       </label>
       <div className="relative">
         <Globe className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-green-200 z-10" />
-        <Select value={language} onValueChange={setLanguage}>
+        <Select 
+          value={language} 
+          onValueChange={setLanguage}
+          onOpenChange={setIsOpen}
+        >
           <SelectTrigger className="w-full pl-10 bg-white/10 border-green-300 focus:ring-green-400 focus:border-green-400 text-white placeholder:text-green-200">
             <SelectValue placeholder="Select language">
               {selectedLanguage?.label || "Select language"}
@@ -147,10 +179,15 @@ const LanguageSelector: React.FC<LanguageSelectorProps> = ({ language, setLangua
               <div className="relative">
                 <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <Input
+                  ref={searchInputRef}
                   placeholder="Search languages..."
                   value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onChange={handleSearchChange}
+                  onKeyDown={handleSearchKeyDown}
+                  onClick={(e) => e.stopPropagation()}
+                  onFocus={(e) => e.stopPropagation()}
                   className="pl-8 text-sm border-gray-200 focus:ring-green-400 focus:border-green-400"
+                  autoComplete="off"
                 />
               </div>
             </div>
@@ -161,6 +198,10 @@ const LanguageSelector: React.FC<LanguageSelectorProps> = ({ language, setLangua
                     key={lang.value} 
                     value={lang.value} 
                     className="hover:bg-gray-50 focus:bg-gray-50 text-gray-900"
+                    onSelect={() => {
+                      setSearchTerm('');
+                      setIsOpen(false);
+                    }}
                   >
                     {lang.label}
                   </SelectItem>
