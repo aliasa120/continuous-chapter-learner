@@ -1,4 +1,3 @@
-
 import Groq from 'groq-sdk';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
@@ -24,31 +23,22 @@ export interface TranscriptionOptions {
 const GROQ_API_KEY = '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';
 const GEMINI_API_KEY = 'AIzaSyDcvqkBlNTX1mhT6y7e-BK6Ix-AdCbR95A';
 
-// Enhanced transcription with single API calls
+// Main transcription function with proper flow
 export const transcribeWithGroqAndGemini = async ({ file, language }: TranscriptionOptions): Promise<TranscriptionLine[]> => {
   try {
-    console.log('=== ENHANCED TRANSCRIPTION WITH SINGLE API CALLS ===');
+    console.log('=== STARTING TRANSCRIPTION PROCESS ===');
     console.log('Target language:', language, 'File:', file.name, 'Size:', (file.size / 1024 / 1024).toFixed(2), 'MB');
     
-    // Mobile optimization: Check file size and compress if needed
-    const maxMobileFileSize = 25 * 1024 * 1024; // 25MB for mobile
-    let processedFile = file;
-    
-    if (file.size > maxMobileFileSize && isMobileDevice()) {
-      console.log('Large file detected on mobile, optimizing...');
-      processedFile = await optimizeFileForMobile(file);
-    }
-    
-    // Step 1: Use Groq for transcription with word-level timestamps
+    // STEP 1: Get COMPLETE transcription from Groq Whisper in original language
     const groq = new Groq({
       apiKey: GROQ_API_KEY,
       dangerouslyAllowBrowser: true,
     });
 
-    console.log('Step 1: Getting original transcription with word timestamps from Groq...');
+    console.log('STEP 1: Getting complete transcription from Groq Whisper...');
     
     const transcription = await groq.audio.transcriptions.create({
-      file: processedFile,
+      file: file,
       model: "whisper-large-v3-turbo",
       response_format: "verbose_json",
       timestamp_granularities: ["word", "segment"],
@@ -56,11 +46,16 @@ export const transcribeWithGroqAndGemini = async ({ file, language }: Transcript
     });
 
     console.log('✓ Groq transcription completed');
+    console.log('Transcription data:', transcription);
     
-    // Extract original segments with word-level timing
+    // Parse the complete transcription with all segments
     const originalSegments = parseGroqTranscription(transcription);
-    console.log('Original segments count:', originalSegments.length);
-    console.log('First few segments:', originalSegments.slice(0, 3));
+    console.log('✓ Parsed segments count:', originalSegments.length);
+    console.log('First 3 segments:', originalSegments.slice(0, 3));
+    
+    if (originalSegments.length === 0) {
+      throw new Error('No transcription segments found. The audio might be too quiet or empty.');
+    }
     
     // If target language is English, return original segments
     if (language === 'en') {
@@ -68,121 +63,166 @@ export const transcribeWithGroqAndGemini = async ({ file, language }: Transcript
       return originalSegments;
     }
     
-    // Step 2: Use Gemini for translation in a SINGLE API call
+    // STEP 2: Translate ALL segments to target language using Gemini in ONE API call
     const targetLanguageName = getLanguageName(language);
-    console.log('Step 2: Using Gemini for translation to', targetLanguageName, 'in single API call');
+    console.log('STEP 2: Translating all segments to', targetLanguageName, 'using Gemini...');
     
     const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
     const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
-    // Create comprehensive translation prompt for ALL segments at once
-    const allSegmentsPrompt = `You are a professional translator. Your task is to translate ALL the following transcript segments from the original language to natural, fluent ${targetLanguageName}. 
+    // Create translation prompt for ALL segments with timestamps
+    const segmentsText = originalSegments.map((seg, idx) => 
+      `[${seg.timestamp}] ${seg.text}`
+    ).join('\n');
 
-CRITICAL RULES:
-1. Translate EVERY segment listed below - do NOT skip any
-2. Maintain EXACT same meaning and natural length
-3. Keep the same speaking style and tone
-4. Preserve all details - do NOT summarize or condense
-5. Return translations in the EXACT same order as provided
-6. Use natural ${targetLanguageName} expressions
+    const translationPrompt = `You are a professional translator. Translate the following transcript segments from the original language to natural, fluent ${targetLanguageName}.
+
+CRITICAL INSTRUCTIONS:
+1. Translate EVERY segment below - do NOT skip any
+2. Keep the EXACT same meaning and natural length
+3. Maintain speaking style and tone
+4. Return translations in EXACT same order
+5. Keep timestamps as they are - only translate the text after each timestamp
+6. Do NOT summarize, condense, or skip anything
 
 SEGMENTS TO TRANSLATE (${originalSegments.length} total):
-${originalSegments.map((seg, idx) => `${idx + 1}. [${seg.timestamp}] "${seg.text}"`).join('\n')}
+${segmentsText}
 
-Please translate each segment to natural ${targetLanguageName} and return them in this format:
-1. [translated text for segment 1]
-2. [translated text for segment 2]
+Return the translations in this EXACT format:
+[timestamp] translated text
+[timestamp] translated text
 ...and so on for all ${originalSegments.length} segments.
 
-IMPORTANT: Return ONLY the numbered translations, nothing else.`;
+IMPORTANT: Return ONLY the translated segments with timestamps, nothing else.`;
 
     try {
       console.log('Sending all segments to Gemini for translation...');
-      const result = await model.generateContent(allSegmentsPrompt);
-      const translatedText = result.response.text().trim();
+      console.log('Translation prompt length:', translationPrompt.length);
+      
+      const result = await model.generateContent(translationPrompt);
+      const translatedResponse = result.response.text().trim();
       
       console.log('✓ Gemini translation completed');
-      console.log('Translation response length:', translatedText.length);
+      console.log('Translation response:', translatedResponse);
       
-      // Parse ALL translations from the single response
-      const translations = parseAllTranslations(translatedText, originalSegments.length);
-      console.log('Parsed translations count:', translations.length);
+      // Parse the translated response back to segments
+      const translatedSegments = parseTranslatedResponse(translatedResponse, originalSegments);
+      console.log('✓ Parsed translated segments count:', translatedSegments.length);
+      console.log('First 3 translated segments:', translatedSegments.slice(0, 3));
       
-      // Create translated segments with enhanced timing
-      const translatedSegments: TranscriptionLine[] = originalSegments.map((originalSegment, index) => {
-        const translation = translations[index] || originalSegment.text;
-        
-        // Generate enhanced word timings for translated text
-        const translatedWords = generateEnhancedWordTimings(
-          translation, 
-          originalSegment.startTime, 
-          originalSegment.endTime,
-          originalSegment.words || []
-        );
-        
-        return {
-          timestamp: originalSegment.timestamp,
-          text: translation,
-          startTime: originalSegment.startTime,
-          endTime: originalSegment.endTime,
-          confidence: 95, // High confidence for AI translation
-          words: translatedWords
-        };
-      });
+      if (translatedSegments.length !== originalSegments.length) {
+        console.warn('Translation count mismatch! Using fallback...');
+        return originalSegments; // Fallback to original if translation failed
+      }
       
-      console.log('✓ Translation mapping completed');
-      console.log('Final segments count:', translatedSegments.length);
-      console.log('First few translated segments:', translatedSegments.slice(0, 3));
-      console.log('=== TRANSCRIPTION PROCESS COMPLETED ===');
-      
+      console.log('=== TRANSCRIPTION PROCESS COMPLETED SUCCESSFULLY ===');
       return translatedSegments;
       
     } catch (translationError) {
       console.error('❌ Translation error:', translationError);
-      // Fallback to original segments with high confidence
-      return originalSegments.map(segment => ({
-        ...segment,
-        confidence: 85
-      }));
+      console.log('Falling back to original transcription');
+      return originalSegments;
     }
   } catch (error) {
     console.error('❌ Transcription error:', error);
-    throw new Error('Transcription failed. Please check your connection and try again.');
+    throw new Error(`Transcription failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 };
 
-// Parse ALL translations from a single Gemini response
-const parseAllTranslations = (text: string, expectedCount: number): string[] => {
-  console.log('Parsing translations from response...');
-  const lines = text.split('\n').filter(line => line.trim());
-  const translations: string[] = [];
+// Parse the translated response back to structured segments
+const parseTranslatedResponse = (response: string, originalSegments: TranscriptionLine[]): TranscriptionLine[] => {
+  console.log('Parsing translated response...');
   
-  // Try to find numbered patterns like "1. text" or "1) text"
-  for (let i = 1; i <= expectedCount; i++) {
-    const pattern = new RegExp(`^${i}[.)\\s]+(.+)`, 'i');
-    let foundTranslation = '';
+  const lines = response.split('\n').filter(line => line.trim());
+  const translatedSegments: TranscriptionLine[] = [];
+  
+  for (let i = 0; i < originalSegments.length; i++) {
+    const originalSegment = originalSegments[i];
+    let translatedText = originalSegment.text; // Fallback to original
     
-    // Look for the numbered line
+    // Try to find the corresponding translated line
     for (const line of lines) {
-      const match = line.trim().match(pattern);
-      if (match) {
-        foundTranslation = match[1].trim();
-        // Remove any remaining brackets or formatting
-        foundTranslation = foundTranslation.replace(/^\[|\]$/g, '').trim();
-        break;
+      const timestampMatch = line.match(/^\[([^\]]+)\]\s*(.+)$/);
+      if (timestampMatch) {
+        const [, timestamp, text] = timestampMatch;
+        if (timestamp === originalSegment.timestamp.replace(/^\[|\]$/g, '')) {
+          translatedText = text.trim();
+          break;
+        }
       }
     }
     
-    // If not found, try to get from lines array by index
-    if (!foundTranslation && lines[i - 1]) {
-      foundTranslation = lines[i - 1].replace(/^\d+[.)]\s*/, '').replace(/^\[|\]$/g, '').trim();
+    // If no match found, try by index
+    if (translatedText === originalSegment.text && lines[i]) {
+      const lineMatch = lines[i].match(/^\[([^\]]+)\]\s*(.+)$/);
+      if (lineMatch) {
+        translatedText = lineMatch[2].trim();
+      }
     }
     
-    translations.push(foundTranslation || `Translation ${i} not found`);
+    // Create translated segment with enhanced word timings
+    const translatedWords = generateEnhancedWordTimings(
+      translatedText, 
+      originalSegment.startTime, 
+      originalSegment.endTime,
+      originalSegment.words || []
+    );
+    
+    translatedSegments.push({
+      timestamp: originalSegment.timestamp,
+      text: translatedText,
+      startTime: originalSegment.startTime,
+      endTime: originalSegment.endTime,
+      confidence: 95, // High confidence for AI translation
+      words: translatedWords
+    });
   }
   
-  console.log(`Parsed ${translations.length}/${expectedCount} translations`);
-  return translations;
+  console.log(`Parsed ${translatedSegments.length}/${originalSegments.length} translated segments`);
+  return translatedSegments;
+};
+
+// Enhanced parsing of Groq transcription to get ALL segments
+const parseGroqTranscription = (transcription: any): TranscriptionLine[] => {
+  console.log('Parsing Groq transcription...');
+  console.log('Transcription object keys:', Object.keys(transcription));
+  console.log('Segments count:', transcription.segments?.length || 0);
+  console.log('Words count:', transcription.words?.length || 0);
+  
+  const segments: TranscriptionLine[] = [];
+  
+  if (transcription.segments && transcription.segments.length > 0) {
+    transcription.segments.forEach((segment: any, index: number) => {
+      if (segment.text && segment.text.trim()) {
+        console.log(`Processing segment ${index + 1}:`, {
+          start: segment.start,
+          end: segment.end,
+          text: segment.text.substring(0, 50) + '...'
+        });
+        
+        // Extract word-level timestamps for this segment
+        const segmentWords = transcription.words?.filter((word: any) => 
+          word.start >= segment.start && word.end <= segment.end
+        ).map((word: any) => ({
+          word: word.word,
+          start: word.start,
+          end: word.end,
+        })) || [];
+        
+        segments.push({
+          timestamp: `[${formatTime(segment.start)}-${formatTime(segment.end)}]`,
+          text: segment.text.trim(),
+          startTime: segment.start,
+          endTime: segment.end,
+          confidence: Math.round((1 + (segment.avg_logprob || -0.5)) * 100),
+          words: segmentWords.length > 0 ? segmentWords : generateEnhancedWordTimings(segment.text.trim(), segment.start, segment.end, []),
+        });
+      }
+    });
+  }
+  
+  console.log(`Parsed ${segments.length} segments from Groq transcription`);
+  return segments;
 };
 
 // Enhanced word timing generation with better accuracy
@@ -227,20 +267,6 @@ const generateEnhancedWordTimings = (
       start: wordStart,
       end: wordEnd,
     };
-  });
-};
-
-// Mobile device detection
-const isMobileDevice = (): boolean => {
-  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
-         window.innerWidth <= 768;
-};
-
-// File optimization for mobile
-const optimizeFileForMobile = async (file: File): Promise<File> => {
-  return new Promise((resolve) => {
-    console.log('File optimization placeholder - returning original file');
-    resolve(file);
   });
 };
 
@@ -304,34 +330,18 @@ Provide a brief summary capturing the key points in ${targetLanguageName}:`;
   }
 };
 
-const parseGroqTranscription = (transcription: any): TranscriptionLine[] => {
-  const segments: TranscriptionLine[] = [];
-  
-  if (transcription.segments) {
-    transcription.segments.forEach((segment: any) => {
-      if (segment.text && segment.text.trim()) {
-        // Extract word-level timestamps if available
-        const words = transcription.words?.filter((word: any) => 
-          word.start >= segment.start && word.end <= segment.end
-        ).map((word: any) => ({
-          word: word.word,
-          start: word.start,
-          end: word.end,
-        })) || generateEnhancedWordTimings(segment.text.trim(), segment.start, segment.end, []);
-        
-        segments.push({
-          timestamp: `${formatTime(segment.start)}-${formatTime(segment.end)}`,
-          text: segment.text.trim(),
-          startTime: segment.start,
-          endTime: segment.end,
-          confidence: Math.round((1 + (segment.avg_logprob || -0.5)) * 100),
-          words,
-        });
-      }
-    });
-  }
-  
-  return segments;
+// Mobile device detection
+const isMobileDevice = (): boolean => {
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
+         window.innerWidth <= 768;
+};
+
+// File optimization for mobile
+const optimizeFileForMobile = async (file: File): Promise<File> => {
+  return new Promise((resolve) => {
+    console.log('File optimization placeholder - returning original file');
+    resolve(file);
+  });
 };
 
 const getLanguageName = (lang: string): string => {
