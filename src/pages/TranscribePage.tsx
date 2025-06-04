@@ -1,10 +1,11 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import FileUpload from '../components/FileUpload';
 import LanguageSelector from '../components/LanguageSelector';
 import MobileTranscriptionResult from '../components/MobileTranscriptionResult';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Wand2, Sparkles, Zap } from 'lucide-react';
+import { ArrowLeft, Sparkles, Upload } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { transcribeWithGemini } from '../utils/geminiTranscription';
 import { TranscriptionLine } from '../types/transcription';
@@ -42,11 +43,10 @@ const TranscribePage = () => {
       return;
     }
 
-    const remaining = apiRateLimit.getRemainingRequests();
-    if (remaining.daily <= 0 || remaining.minute <= 0) {
+    if (!apiRateLimit.hasAvailableRequests()) {
       toast({
-        title: "Rate limit exceeded",
-        description: "Please wait before making another request.",
+        title: "Service busy",
+        description: "Please try again in a moment.",
         variant: "destructive",
       });
       return;
@@ -56,22 +56,22 @@ const TranscribePage = () => {
     setTranscriptionLines([]);
     
     try {
-      console.log('Starting enhanced transcription with file:', file.name, 'language:', language);
+      console.log('Starting transcription with file:', file.name, 'language:', language);
       
       const results = await transcribeWithGemini({
         file,
         language
       });
       
-      console.log('Enhanced transcription completed, results:', results);
+      console.log('Transcription completed, results:', results);
       setTranscriptionLines(results);
       
       toast({
         title: "Transcription Complete!",
-        description: `Successfully transcribed ${results.length} segments with word-level timing.`,
+        description: `Successfully transcribed ${results.length} segments.`,
       });
     } catch (error) {
-      console.error('Enhanced transcription failed:', error);
+      console.error('Transcription failed:', error);
       toast({
         title: "Transcription failed",
         description: error instanceof Error ? error.message : "An unexpected error occurred.",
@@ -160,7 +160,7 @@ const TranscribePage = () => {
     }
   }, [file]);
 
-  // Render media element with enhanced features
+  // Render media element
   const renderMediaElement = () => {
     if (!file || !mediaUrlRef.current) return null;
 
@@ -225,95 +225,81 @@ const TranscribePage = () => {
     return null;
   };
 
-  const remaining = apiRateLimit.getRemainingRequests();
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 to-white py-4">
-      <div className="container mx-auto px-4">
+    <div className="min-h-screen bg-gradient-to-br from-green-50 to-white">
+      <div className="container mx-auto px-3 py-4 max-w-md">
+        {/* Header */}
         <div className="mb-4">
-          <Link to="/" className="inline-flex items-center text-green-600 hover:text-green-800 transition-colors">
+          <Link to="/" className="inline-flex items-center text-green-600 hover:text-green-800 transition-colors text-sm">
             <ArrowLeft className="h-4 w-4 mr-1" />
             Back to home
           </Link>
         </div>
 
-        <h1 className="text-2xl sm:text-3xl font-bold mb-6 text-center bg-gradient-to-r from-green-600 to-emerald-500 bg-clip-text text-transparent">
-          AI Transcription & Analysis
+        <h1 className="text-xl font-bold mb-4 text-center bg-gradient-to-r from-green-600 to-emerald-500 bg-clip-text text-transparent">
+          AI Transcription
         </h1>
 
-        <div className="max-w-6xl mx-auto">
-          <div className="flex flex-col lg:flex-row gap-4">
-            {/* Transcription Wizard Card */}
-            <div className="w-full lg:w-1/2 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl shadow-lg text-white p-4">
-              <div className="flex items-center mb-4">
-                <div className="bg-white/20 p-2 rounded-lg mr-3">
-                  <Zap className="h-4 w-4 text-white" /> 
-                </div>
-                <h2 className="text-lg font-bold">
-                  AI Transcription Engine
-                </h2>
-              </div>
-              <p className="mb-4 text-green-50 text-sm">
-                Advanced AI transcription with word-level highlighting, explanation, and summarization.
-              </p>
-              
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-green-50 mb-1">
-                    Upload Media File
-                  </label>
-                  <FileUpload file={file} setFile={setFile} />
-                </div>
-                
-                <LanguageSelector language={language} setLanguage={setLanguage} />
-                
-                <div className="text-xs text-green-100 bg-white/10 rounded p-2">
-                  Requests remaining: {remaining.daily}/500 daily, {remaining.minute}/10 per minute
-                </div>
-                
-                <Button 
-                  onClick={handleTranscribe} 
-                  disabled={!file || isTranscribing || remaining.daily <= 0 || remaining.minute <= 0}
-                  className="w-full bg-white text-green-700 hover:bg-green-50 h-10"
-                >
-                  {isTranscribing ? 
-                    <span className="flex items-center text-sm">
-                      <div className="w-4 h-4 border-2 border-t-transparent border-green-700 rounded-full animate-spin mr-2"></div>
-                      AI Processing...
-                    </span> : 
-                    <span className="flex items-center text-sm">
-                      <Sparkles className="mr-2 h-4 w-4" />
-                      Start Transcription
-                    </span>
-                  }
-                </Button>
-              </div>
+        {/* Upload Card */}
+        <div className="bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg shadow-lg text-white p-4 mb-4">
+          <div className="flex items-center mb-3">
+            <div className="bg-white/20 p-1.5 rounded-lg mr-2">
+              <Upload className="h-4 w-4 text-white" /> 
+            </div>
+            <h2 className="text-base font-bold">Upload & Process</h2>
+          </div>
+          
+          <div className="space-y-3">
+            <div>
+              <label className="block text-xs font-medium text-green-50 mb-1">
+                Media File
+              </label>
+              <FileUpload file={file} setFile={setFile} />
             </div>
             
-            {/* Results Card */}
-            <div className="w-full lg:w-1/2 bg-white rounded-xl shadow-lg border border-green-100">
-              <div className="p-4 border-b border-green-100 bg-green-50">
-                <h2 className="text-lg font-bold text-green-800 flex items-center">
-                  <Sparkles className="mr-2 h-4 w-4 text-green-600" />
-                  Smart Results
-                </h2>
-                {duration > 0 && (
-                  <p className="text-sm text-green-600 mt-1">
-                    Duration: {Math.floor(duration / 60)}:{String(Math.floor(duration % 60)).padStart(2, '0')}
-                  </p>
-                )}
-              </div>
-              
-              <MobileTranscriptionResult
-                transcriptionLines={transcriptionLines}
-                isTranscribing={isTranscribing}
-                currentTime={currentTime}
-                seekToTimestamp={seekToTimestamp}
-                isPlaying={isPlaying}
-                onPlayPause={handlePlayPause}
-              />
-            </div>
+            <LanguageSelector language={language} setLanguage={setLanguage} />
+            
+            <Button 
+              onClick={handleTranscribe} 
+              disabled={!file || isTranscribing || !apiRateLimit.hasAvailableRequests()}
+              className="w-full bg-white text-green-700 hover:bg-green-50 h-9 text-sm"
+            >
+              {isTranscribing ? 
+                <span className="flex items-center">
+                  <div className="w-3 h-3 border-2 border-t-transparent border-green-700 rounded-full animate-spin mr-2"></div>
+                  Processing...
+                </span> : 
+                <span className="flex items-center">
+                  <Sparkles className="mr-2 h-3 w-3" />
+                  Start Transcription
+                </span>
+              }
+            </Button>
           </div>
+        </div>
+        
+        {/* Results Card */}
+        <div className="bg-white rounded-lg shadow-lg border border-green-100">
+          <div className="p-3 border-b border-green-100 bg-green-50">
+            <h2 className="text-base font-bold text-green-800 flex items-center">
+              <Sparkles className="mr-2 h-4 w-4 text-green-600" />
+              Results
+            </h2>
+            {duration > 0 && (
+              <p className="text-xs text-green-600 mt-1">
+                Duration: {Math.floor(duration / 60)}:{String(Math.floor(duration % 60)).padStart(2, '0')}
+              </p>
+            )}
+          </div>
+          
+          <MobileTranscriptionResult
+            transcriptionLines={transcriptionLines}
+            isTranscribing={isTranscribing}
+            currentTime={currentTime}
+            seekToTimestamp={seekToTimestamp}
+            isPlaying={isPlaying}
+            onPlayPause={handlePlayPause}
+          />
         </div>
       </div>
       

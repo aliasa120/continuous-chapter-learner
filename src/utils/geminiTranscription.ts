@@ -53,9 +53,41 @@ const generateWordTimestamps = (text: string, startTime: number, endTime: number
       word: word.trim(),
       startTime: wordStartTime,
       endTime: Math.min(wordEndTime, endTime),
-      confidence: 95 // Approximate confidence
+      confidence: 95
     };
   });
+};
+
+// Clean and extract JSON from response
+const extractAndCleanJSON = (text: string): any => {
+  // Remove markdown code blocks
+  let cleanedText = text.replace(/```json\s*/g, '').replace(/```\s*/g, '');
+  
+  // Find JSON object
+  const jsonMatch = cleanedText.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) {
+    throw new Error('No JSON found in response');
+  }
+  
+  let jsonStr = jsonMatch[0];
+  
+  // Fix common JSON issues
+  jsonStr = jsonStr
+    .replace(/,\s*}/g, '}') // Remove trailing commas
+    .replace(/,\s*]/g, ']') // Remove trailing commas in arrays
+    .replace(/\n/g, ' ') // Replace newlines with spaces
+    .replace(/\s+/g, ' '); // Replace multiple spaces with single space
+  
+  try {
+    return JSON.parse(jsonStr);
+  } catch (error) {
+    console.error('JSON parsing failed, attempting to fix...', error);
+    
+    // Try to fix quotes
+    jsonStr = jsonStr.replace(/([{,]\s*)([a-zA-Z_][a-zA-Z0-9_]*)\s*:/g, '$1"$2":');
+    
+    return JSON.parse(jsonStr);
+  }
 };
 
 export const transcribeWithGemini = async ({ file, language }: TranscriptionOptions): Promise<TranscriptionLine[]> => {
@@ -63,7 +95,7 @@ export const transcribeWithGemini = async ({ file, language }: TranscriptionOpti
     const apiKey = apiRateLimit.getAvailableApiKey();
     
     if (!apiKey) {
-      throw new Error('API rate limit exceeded. Please try again in a minute.');
+      throw new Error('Service temporarily unavailable. Please try again in a minute.');
     }
 
     console.log('Converting file to base64...');
@@ -72,31 +104,30 @@ export const transcribeWithGemini = async ({ file, language }: TranscriptionOpti
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
     
-    const prompt = `Transcribe this ${file.type.startsWith('audio/') ? 'audio' : 'video'} file and provide detailed results in the following JSON format:
+    const prompt = `Transcribe this ${file.type.startsWith('audio/') ? 'audio' : 'video'} file and provide results in this exact JSON format:
 
 {
   "transcription": [
     {
-      "timestamp": "MM:SS or HH:MM:SS format",
-      "startTime": number_in_seconds,
-      "endTime": number_in_seconds,
-      "text": "transcribed text",
-      "speaker": "Speaker 1, Speaker 2, etc. (if multiple speakers detected)",
-      "confidence": number_0_to_100
+      "timestamp": "MM:SS",
+      "startTime": 0,
+      "endTime": 5,
+      "text": "transcribed text here",
+      "speaker": "Speaker 1",
+      "confidence": 95
     }
   ]
 }
 
-Important instructions:
-1. If the detected language is "${language === 'en' ? 'English' : 'non-English'}" and the target language is "${language}", return the original transcription without translation
-2. If translation is needed, translate to ${language === 'en' ? 'English' : `language code: ${language}`} while preserving all timing information
-3. Break into natural sentence segments with accurate timestamps
-4. Include speaker identification if multiple speakers are detected
-5. Provide confidence scores for each segment
-6. Ensure timestamps are precise and non-overlapping
-7. Return ONLY the JSON response, no additional text`;
+Requirements:
+- Break into natural sentence segments (3-8 seconds each)
+- Include accurate timestamps in seconds
+- Add speaker identification if multiple speakers
+- Provide confidence scores (80-99)
+- Target language: ${language === 'en' ? 'English' : language}
+- Return ONLY valid JSON, no markdown or extra text`;
 
-    console.log('Sending request to Gemini...');
+    console.log('Sending request to AI...');
     const result = await model.generateContent([
       {
         inlineData: {
@@ -112,15 +143,9 @@ Important instructions:
     const response = await result.response;
     const text = response.text();
     
-    console.log('Raw Gemini response:', text);
+    console.log('Raw AI response:', text);
     
-    // Extract JSON from the response
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      throw new Error('Invalid response format from Gemini');
-    }
-    
-    const parsedResponse = JSON.parse(jsonMatch[0]);
+    const parsedResponse = extractAndCleanJSON(text);
     
     if (!parsedResponse.transcription || !Array.isArray(parsedResponse.transcription)) {
       throw new Error('Invalid transcription format in response');
@@ -129,9 +154,8 @@ Important instructions:
     // Process the transcription data
     const transcriptionLines: TranscriptionLine[] = parsedResponse.transcription.map((item: any, index: number) => {
       const startTime = typeof item.startTime === 'number' ? item.startTime : parseTimestamp(item.timestamp);
-      const endTime = typeof item.endTime === 'number' ? item.endTime : startTime + 5; // Default 5 second duration
+      const endTime = typeof item.endTime === 'number' ? item.endTime : startTime + 5;
       
-      // Generate word-level timestamps
       const words = generateWordTimestamps(item.text, startTime, endTime);
       
       return {

@@ -22,6 +22,13 @@ class ApiRateLimit {
       minuteCount: 0,
       lastResetTime: Date.now(),
       lastMinuteReset: Date.now()
+    },
+    {
+      key: "AIzaSyBcDef3GHi4jKlMnOp5qRsTuVwXyZ012Ab",
+      dailyCount: 0,
+      minuteCount: 0,
+      lastResetTime: Date.now(),
+      lastMinuteReset: Date.now()
     }
   ];
 
@@ -90,24 +97,26 @@ class ApiRateLimit {
     }
   }
 
-  getRemainingRequests(): { daily: number; minute: number } {
-    const currentKey = this.apiKeys[this.currentKeyIndex];
-    this.resetCountsIfNeeded(currentKey);
+  getRemainingRequests(): { daily: number; minute: number; totalMinute: number } {
+    let totalDailyRemaining = 0;
+    let totalMinuteRemaining = 0;
+    
+    this.apiKeys.forEach(key => {
+      this.resetCountsIfNeeded(key);
+      totalDailyRemaining += Math.max(0, this.DAILY_LIMIT - key.dailyCount);
+      totalMinuteRemaining += Math.max(0, this.MINUTE_LIMIT - key.minuteCount);
+    });
     
     return {
-      daily: this.DAILY_LIMIT - currentKey.dailyCount,
-      minute: this.MINUTE_LIMIT - currentKey.minuteCount
+      daily: totalDailyRemaining,
+      minute: totalMinuteRemaining,
+      totalMinute: totalMinuteRemaining
     };
   }
 
-  getTimeUntilReset(): { dailyReset: number; minuteReset: number } {
-    const currentKey = this.apiKeys[this.currentKeyIndex];
-    const now = Date.now();
-    
-    return {
-      dailyReset: 24 * 60 * 60 * 1000 - (now - currentKey.lastResetTime),
-      minuteReset: 60 * 1000 - (now - currentKey.lastMinuteReset)
-    };
+  hasAvailableRequests(): boolean {
+    const remaining = this.getRemainingRequests();
+    return remaining.daily > 0 && remaining.totalMinute > 0;
   }
 }
 

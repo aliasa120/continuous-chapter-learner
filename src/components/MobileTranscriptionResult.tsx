@@ -8,13 +8,11 @@ import {
   Pause, 
   Clipboard, 
   ClipboardCheck, 
-  BookOpen, 
+  Eye,
   FileText,
   Brain,
   Sparkles,
-  Eye,
-  ChevronDown,
-  ChevronUp
+  ChevronRight
 } from 'lucide-react';
 import { TranscriptionLine, ExplanationData, SummaryData } from '../types/transcription';
 import { analyzeText } from '../utils/aiAnalysis';
@@ -73,7 +71,7 @@ const MobileTranscriptionResult: React.FC<MobileTranscriptionResultProps> = ({
     } catch (error) {
       toast({
         title: "Analysis failed",
-        description: error instanceof Error ? error.message : "Please try again later.",
+        description: "Please try again later.",
         variant: "destructive",
       });
       
@@ -105,7 +103,7 @@ const MobileTranscriptionResult: React.FC<MobileTranscriptionResultProps> = ({
     } catch (error) {
       toast({
         title: "Analysis failed",
-        description: error instanceof Error ? error.message : "Please try again later.",
+        description: "Please try again later.",
         variant: "destructive",
       });
       
@@ -119,12 +117,12 @@ const MobileTranscriptionResult: React.FC<MobileTranscriptionResultProps> = ({
 
   if (isTranscribing) {
     return (
-      <div className="p-4 h-80">
+      <div className="p-4 h-64">
         <div className="flex justify-center items-center h-full">
           <div className="text-center">
-            <div className="w-12 h-12 mx-auto border-4 rounded-full border-l-green-600 border-r-green-300 border-b-green-600 border-t-green-300 animate-spin mb-4"></div>
+            <div className="w-10 h-10 mx-auto border-3 rounded-full border-l-green-600 border-r-green-300 border-b-green-600 border-t-green-300 animate-spin mb-3"></div>
             <p className="text-gray-900 animate-pulse text-sm font-semibold">AI Processing...</p>
-            <p className="text-xs text-gray-600 mt-2">Advanced transcription with word-level timing</p>
+            <p className="text-xs text-gray-600 mt-1">Advanced transcription with timing</p>
           </div>
         </div>
       </div>
@@ -133,10 +131,10 @@ const MobileTranscriptionResult: React.FC<MobileTranscriptionResultProps> = ({
 
   if (transcriptionLines.length === 0) {
     return (
-      <div className="p-4 h-80 flex items-center justify-center text-center">
+      <div className="p-4 h-64 flex items-center justify-center text-center">
         <div className="text-gray-600">
-          <div className="text-4xl mb-4">🎯</div>
-          <p className="mb-2 text-sm font-medium">Enhanced transcription results will appear here</p>
+          <div className="text-3xl mb-3">🎯</div>
+          <p className="mb-1 text-sm font-medium">Transcription results will appear here</p>
           <p className="text-xs">Upload a file and start transcription</p>
         </div>
       </div>
@@ -152,78 +150,63 @@ const MobileTranscriptionResult: React.FC<MobileTranscriptionResultProps> = ({
     const allWords = transcriptionLines.flatMap(line => line.words || []);
     
     return (
-      <div className="flex flex-col h-80">
+      <div className="flex flex-col h-64">
         {/* Easy View Header */}
-        <div className="flex justify-between items-center px-4 py-3 border-b border-gray-200 bg-blue-50">
+        <div className="flex justify-between items-center px-3 py-2 border-b border-gray-200 bg-blue-50">
           <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onPlayPause}
-              className="h-8 w-8 p-0"
-            >
+            <Button variant="outline" size="sm" onClick={onPlayPause} className="h-7 w-7 p-0">
               {isPlaying ? <Pause className="h-3 w-3" /> : <Play className="h-3 w-3" />}
             </Button>
-            <span className="text-sm font-medium text-blue-800">Easy View</span>
+            <span className="text-xs font-medium text-blue-800">Easy View</span>
           </div>
           
           <div className="flex items-center gap-1">
             <Button
-              variant="outline"
+              variant="ghost"
               size="sm"
               onClick={() => handleGlobalAnalysis('explanation')}
               disabled={globalExplanation.isLoading}
-              className="h-8 w-8 p-0"
+              className="h-7 w-7 p-0"
             >
               {globalExplanation.isLoading ? (
-                <div className="w-3 h-3 border border-blue-600 border-t-transparent rounded-full animate-spin" />
+                <div className="w-2 h-2 border border-blue-600 border-t-transparent rounded-full animate-spin" />
               ) : (
-                <Brain className="h-3 w-3" />
+                <Brain className="h-3 w-3 text-blue-600" />
               )}
             </Button>
             <Button
-              variant="outline"
+              variant="ghost"
               size="sm"
               onClick={() => handleGlobalAnalysis('summary')}
               disabled={globalSummary.isLoading}
-              className="h-8 w-8 p-0"
+              className="h-7 w-7 p-0"
             >
               {globalSummary.isLoading ? (
-                <div className="w-3 h-3 border border-green-600 border-t-transparent rounded-full animate-spin" />
+                <div className="w-2 h-2 border border-green-600 border-t-transparent rounded-full animate-spin" />
               ) : (
-                <Sparkles className="h-3 w-3" />
+                <Sparkles className="h-3 w-3 text-green-600" />
               )}
             </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={copyToClipboard}
-              className="h-8 w-8 p-0"
-            >
+            <Button variant="ghost" size="sm" onClick={copyToClipboard} className="h-7 w-7 p-0">
               {copied ? <ClipboardCheck className="h-3 w-3" /> : <Clipboard className="h-3 w-3" />}
             </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setEasyView(false)}
-              className="h-8 w-8 p-0"
-            >
+            <Button variant="ghost" size="sm" onClick={() => setEasyView(false)} className="h-7 w-7 p-0">
               <FileText className="h-3 w-3" />
             </Button>
           </div>
         </div>
 
-        <ScrollArea className="flex-1 p-4">
-          <div className="space-y-4">
+        <ScrollArea className="flex-1 p-3">
+          <div className="space-y-3">
             {/* Global Analysis Results */}
             {globalExplanation.text && (
               <Card className="border-blue-200 bg-blue-50">
                 <CardContent className="p-3">
                   <div className="flex items-center gap-2 mb-2">
-                    <Brain className="h-4 w-4 text-blue-600" />
-                    <span className="text-sm font-medium text-blue-800">AI Explanation</span>
+                    <Brain className="h-3 w-3 text-blue-600" />
+                    <span className="text-xs font-medium text-blue-800">AI Explanation</span>
                   </div>
-                  <p className="text-sm text-gray-700">{globalExplanation.text}</p>
+                  <p className="text-xs text-gray-700">{globalExplanation.text}</p>
                 </CardContent>
               </Card>
             )}
@@ -232,10 +215,10 @@ const MobileTranscriptionResult: React.FC<MobileTranscriptionResultProps> = ({
               <Card className="border-green-200 bg-green-50">
                 <CardContent className="p-3">
                   <div className="flex items-center gap-2 mb-2">
-                    <Sparkles className="h-4 w-4 text-green-600" />
-                    <span className="text-sm font-medium text-green-800">AI Summary</span>
+                    <Sparkles className="h-3 w-3 text-green-600" />
+                    <span className="text-xs font-medium text-green-800">AI Summary</span>
                   </div>
-                  <p className="text-sm text-gray-700">{globalSummary.text}</p>
+                  <p className="text-xs text-gray-700">{globalSummary.text}</p>
                 </CardContent>
               </Card>
             )}
@@ -255,36 +238,21 @@ const MobileTranscriptionResult: React.FC<MobileTranscriptionResultProps> = ({
   }
 
   return (
-    <div className="flex flex-col h-80">
+    <div className="flex flex-col h-64">
       {/* Header */}
       <div className="flex justify-between items-center px-3 py-2 border-b border-gray-200 bg-gray-50">
         <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onPlayPause}
-            className="h-8 w-8 p-0"
-          >
+          <Button variant="outline" size="sm" onClick={onPlayPause} className="h-7 w-7 p-0">
             {isPlaying ? <Pause className="h-3 w-3" /> : <Play className="h-3 w-3" />}
           </Button>
           <span className="text-xs text-gray-600">{transcriptionLines.length} segments</span>
         </div>
         
         <div className="flex items-center gap-1">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setEasyView(true)}
-            className="h-8 w-8 p-0"
-          >
+          <Button variant="ghost" size="sm" onClick={() => setEasyView(true)} className="h-7 w-7 p-0">
             <Eye className="h-3 w-3" />
           </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={copyToClipboard}
-            className="h-8 w-8 p-0"
-          >
+          <Button variant="ghost" size="sm" onClick={copyToClipboard} className="h-7 w-7 p-0">
             {copied ? <ClipboardCheck className="h-3 w-3" /> : <Clipboard className="h-3 w-3" />}
           </Button>
         </div>
@@ -297,14 +265,13 @@ const MobileTranscriptionResult: React.FC<MobileTranscriptionResultProps> = ({
             const isActive = isLineActive(line);
             const hasExplanation = explanations[index]?.text;
             const hasSummary = summaries[index]?.text;
-            const isExpanded = hasExplanation || hasSummary;
             
             return (
               <Card 
                 key={index}
                 className={`transition-all cursor-pointer ${
                   isActive 
-                    ? 'border-green-500 shadow-md bg-green-50 ring-1 ring-green-200' 
+                    ? 'border-green-500 shadow-sm bg-green-50 ring-1 ring-green-200' 
                     : 'border-gray-200 hover:border-green-300 bg-white'
                 }`}
                 onClick={() => seekToTimestamp(line.startTime)}
@@ -312,12 +279,12 @@ const MobileTranscriptionResult: React.FC<MobileTranscriptionResultProps> = ({
                 <CardContent className="p-3">
                   {/* Header */}
                   <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-xs font-mono text-green-700 bg-green-100 px-2 py-1 rounded">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-mono text-green-700 bg-green-100 px-2 py-0.5 rounded">
                         {line.timestamp}
                       </span>
                       {line.speaker && (
-                        <span className="text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded">
+                        <span className="text-xs text-blue-600 bg-blue-100 px-2 py-0.5 rounded">
                           {line.speaker}
                         </span>
                       )}
@@ -335,7 +302,7 @@ const MobileTranscriptionResult: React.FC<MobileTranscriptionResultProps> = ({
                         className="h-6 w-6 p-0"
                       >
                         {explanations[index]?.isLoading ? (
-                          <div className="w-3 h-3 border border-blue-600 border-t-transparent rounded-full animate-spin" />
+                          <div className="w-2 h-2 border border-blue-600 border-t-transparent rounded-full animate-spin" />
                         ) : (
                           <Brain className="h-3 w-3 text-blue-600" />
                         )}
@@ -351,27 +318,27 @@ const MobileTranscriptionResult: React.FC<MobileTranscriptionResultProps> = ({
                         className="h-6 w-6 p-0"
                       >
                         {summaries[index]?.isLoading ? (
-                          <div className="w-3 h-3 border border-green-600 border-t-transparent rounded-full animate-spin" />
+                          <div className="w-2 h-2 border border-green-600 border-t-transparent rounded-full animate-spin" />
                         ) : (
                           <Sparkles className="h-3 w-3 text-green-600" />
                         )}
                       </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="h-6 w-6 p-0"
                         onClick={(e) => {
                           e.stopPropagation();
                           seekToTimestamp(line.startTime);
                         }}
-                        className="h-6 w-6 p-0"
                       >
-                        <Play className="h-3 w-3 text-gray-600" />
+                        <ChevronRight className="h-3 w-3 text-gray-600" />
                       </Button>
                     </div>
                   </div>
                   
                   {/* Text Content */}
-                  <div className={`text-sm leading-relaxed ${isActive ? 'font-medium text-green-900' : 'text-gray-900'}`}>
+                  <div className={`text-sm leading-relaxed mb-2 ${isActive ? 'font-medium text-green-900' : 'text-gray-900'}`}>
                     {line.words ? (
                       <WordHighlight words={line.words} currentTime={currentTime} />
                     ) : (
@@ -381,7 +348,7 @@ const MobileTranscriptionResult: React.FC<MobileTranscriptionResultProps> = ({
                   
                   {/* Analysis Results */}
                   {hasExplanation && (
-                    <div className="mt-3 p-2 bg-blue-50 border border-blue-200 rounded text-xs">
+                    <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-xs">
                       <div className="flex items-center gap-1 mb-1">
                         <Brain className="h-3 w-3 text-blue-600" />
                         <span className="font-medium text-blue-800">Explanation</span>
