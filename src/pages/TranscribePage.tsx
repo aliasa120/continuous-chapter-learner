@@ -1,15 +1,12 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import FileUpload from '../components/FileUpload';
 import LanguageSelector from '../components/LanguageSelector';
-import MobileTranscriptionResult from '../components/MobileTranscriptionResult';
+import TranscriptionResult from '../components/TranscriptionResult';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Sparkles, Upload } from 'lucide-react';
+import { ArrowLeft, Wand2, Sparkles, Clock, FileText } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { transcribeWithGemini } from '../utils/geminiTranscription';
-import { TranscriptionLine } from '../types/transcription';
-import { apiRateLimit } from '../utils/apiRateLimit';
+import { transcribeWithGroqAndGemini, type TranscriptionLine } from '../utils/groqGeminiTranscription';
 
 const TranscribePage = () => {
   const [file, setFile] = useState<File | null>(null);
@@ -19,6 +16,7 @@ const TranscribePage = () => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [showTimestamps, setShowTimestamps] = useState(true);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const mediaUrlRef = useRef<string | null>(null);
@@ -43,22 +41,13 @@ const TranscribePage = () => {
       return;
     }
 
-    if (!apiRateLimit.hasAvailableRequests()) {
-      toast({
-        title: "Service busy",
-        description: "Please try again in a moment.",
-        variant: "destructive",
-      });
-      return;
-    }
-
     setIsTranscribing(true);
     setTranscriptionLines([]);
     
     try {
       console.log('Starting transcription with file:', file.name, 'language:', language);
       
-      const results = await transcribeWithGemini({
+      const results = await transcribeWithGroqAndGemini({
         file,
         language
       });
@@ -160,7 +149,7 @@ const TranscribePage = () => {
     }
   }, [file]);
 
-  // Render media element
+  // Render media element with enhanced features
   const renderMediaElement = () => {
     if (!file || !mediaUrlRef.current) return null;
 
@@ -226,80 +215,120 @@ const TranscribePage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 to-white">
-      <div className="container mx-auto px-3 py-4 max-w-md">
-        {/* Header */}
-        <div className="mb-4">
+    <div className="min-h-screen bg-gradient-to-br from-green-50 to-white py-2 sm:py-4 lg:py-12 overflow-x-hidden">
+      <div className="container mx-auto px-2 sm:px-4 max-w-7xl">
+        <div className="mb-2 sm:mb-4 lg:mb-8">
           <Link to="/" className="inline-flex items-center text-green-600 hover:text-green-800 transition-colors text-sm">
             <ArrowLeft className="h-4 w-4 mr-1" />
             Back to home
           </Link>
         </div>
 
-        <h1 className="text-xl font-bold mb-4 text-center bg-gradient-to-r from-green-600 to-emerald-500 bg-clip-text text-transparent">
-          AI Transcription
+        <h1 className="text-lg sm:text-2xl lg:text-4xl font-bold mb-3 sm:mb-6 lg:mb-8 text-center bg-gradient-to-r from-green-600 to-emerald-500 bg-clip-text text-transparent px-2">
+          AI Transcription & Translation
         </h1>
 
-        {/* Upload Card */}
-        <div className="bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg shadow-lg text-white p-4 mb-4">
-          <div className="flex items-center mb-3">
-            <div className="bg-white/20 p-1.5 rounded-lg mr-2">
-              <Upload className="h-4 w-4 text-white" /> 
-            </div>
-            <h2 className="text-base font-bold">Upload & Process</h2>
-          </div>
-          
-          <div className="space-y-3">
-            <div>
-              <label className="block text-xs font-medium text-green-50 mb-1">
-                Media File
-              </label>
-              <FileUpload file={file} setFile={setFile} />
-            </div>
-            
-            <LanguageSelector language={language} setLanguage={setLanguage} />
-            
-            <Button 
-              onClick={handleTranscribe} 
-              disabled={!file || isTranscribing || !apiRateLimit.hasAvailableRequests()}
-              className="w-full bg-white text-green-700 hover:bg-green-50 h-9 text-sm"
-            >
-              {isTranscribing ? 
-                <span className="flex items-center">
-                  <div className="w-3 h-3 border-2 border-t-transparent border-green-700 rounded-full animate-spin mr-2"></div>
-                  Processing...
-                </span> : 
-                <span className="flex items-center">
-                  <Sparkles className="mr-2 h-3 w-3" />
-                  Start Transcription
-                </span>
-              }
-            </Button>
-          </div>
-        </div>
-        
-        {/* Results Card */}
-        <div className="bg-white rounded-lg shadow-lg border border-green-100">
-          <div className="p-3 border-b border-green-100 bg-green-50">
-            <h2 className="text-base font-bold text-green-800 flex items-center">
-              <Sparkles className="mr-2 h-4 w-4 text-green-600" />
-              Results
-            </h2>
-            {duration > 0 && (
-              <p className="text-xs text-green-600 mt-1">
-                Duration: {Math.floor(duration / 60)}:{String(Math.floor(duration % 60)).padStart(2, '0')}
+        <div className="max-w-6xl mx-auto">
+          <div className="flex flex-col lg:flex-row gap-3 sm:gap-4 lg:gap-6">
+            {/* Mobile-Optimized Transcription Card */}
+            <div className="w-full lg:w-1/2 bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg lg:rounded-xl shadow-lg text-white p-3 sm:p-4 lg:p-6 transform transition-all hover:-translate-y-1 hover:shadow-xl">
+              <div className="flex items-center mb-3 sm:mb-4">
+                <div className="bg-white/20 p-1.5 sm:p-2 rounded-lg mr-2 sm:mr-3 shrink-0">
+                  <Sparkles className="h-4 w-4 text-white" /> 
+                </div>
+                <h2 className="text-base sm:text-lg lg:text-xl font-bold">
+                  Smart Transcription
+                </h2>
+              </div>
+              
+              <p className="mb-3 sm:mb-4 lg:mb-6 text-green-50 text-xs sm:text-sm lg:text-base hidden sm:block">
+                Advanced AI transcription with real-time translation and enhanced synchronization capabilities.
               </p>
-            )}
+              
+              <div className="space-y-3 sm:space-y-4 lg:space-y-6">
+                <div>
+                  <label className="block text-xs sm:text-sm font-medium text-green-50 mb-1">
+                    Upload Media File
+                  </label>
+                  <FileUpload file={file} setFile={setFile} />
+                </div>
+                
+                <LanguageSelector language={language} setLanguage={setLanguage} />
+                
+                <Button 
+                  onClick={handleTranscribe} 
+                  disabled={!file || isTranscribing}
+                  className="w-full bg-white text-green-700 hover:bg-green-50 h-9 sm:h-10 lg:h-11 text-sm sm:text-base font-medium"
+                >
+                  {isTranscribing ? 
+                    <span className="flex items-center">
+                      <div className="w-3 h-3 sm:w-4 sm:h-4 border-2 border-t-transparent border-green-700 rounded-full animate-spin mr-2"></div>
+                      Processing...
+                    </span> : 
+                    <span className="flex items-center">
+                      <Sparkles className="mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+                      Start Transcription
+                    </span>
+                  }
+                </Button>
+              </div>
+            </div>
+            
+            {/* Results Card with Mobile-Optimized Layout */}
+            <div className="w-full lg:w-1/2 bg-white rounded-lg lg:rounded-xl shadow-lg border border-green-100 transform transition-all hover:shadow-xl">
+              <div className="p-3 sm:p-4 lg:p-6 border-b border-green-100 bg-green-50">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                  <h2 className="text-base sm:text-lg lg:text-xl font-bold text-green-800 flex items-center">
+                    <Wand2 className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
+                    Smart Results
+                  </h2>
+                  
+                  {/* Timestamp Toggle */}
+                  <div className="flex gap-1 sm:gap-2">
+                    <Button
+                      variant={showTimestamps ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setShowTimestamps(true)}
+                      className={`text-xs h-6 sm:h-7 px-2 sm:px-3 ${showTimestamps ? 'bg-green-600 text-white' : 'text-green-600 border-green-300'}`}
+                    >
+                      <Clock className="h-3 w-3 mr-1" />
+                      <span className="hidden sm:inline">With Time</span>
+                    </Button>
+                    <Button
+                      variant={!showTimestamps ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setShowTimestamps(false)}
+                      className={`text-xs h-6 sm:h-7 px-2 sm:px-3 ${!showTimestamps ? 'bg-green-600 text-white' : 'text-green-600 border-green-300'}`}
+                    >
+                      <FileText className="h-3 w-3 mr-1" />
+                      <span className="hidden sm:inline">Essay</span>
+                    </Button>
+                  </div>
+                </div>
+                
+                {duration > 0 && (
+                  <p className="text-xs sm:text-sm text-green-600 mt-1">
+                    Duration: {Math.floor(duration / 60)}:{String(Math.floor(duration % 60)).padStart(2, '0')}
+                  </p>
+                )}
+              </div>
+              
+              <TranscriptionResult
+                transcriptionLines={transcriptionLines}
+                isTranscribing={isTranscribing}
+                currentTime={currentTime}
+                seekToTimestamp={seekToTimestamp}
+                isPlaying={isPlaying}
+                onPlayPause={handlePlayPause}
+                showTimestamps={showTimestamps}
+                language={language}
+              />
+            </div>
           </div>
           
-          <MobileTranscriptionResult
-            transcriptionLines={transcriptionLines}
-            isTranscribing={isTranscribing}
-            currentTime={currentTime}
-            seekToTimestamp={seekToTimestamp}
-            isPlaying={isPlaying}
-            onPlayPause={handlePlayPause}
-          />
+          <div className="mt-3 sm:mt-4 lg:mt-6 text-center text-xs text-gray-500 bg-green-50 p-2 sm:p-3 lg:p-4 rounded-lg border border-green-100">
+            🎯 Multi-language AI • AI Explanations • Precise Sync
+          </div>
         </div>
       </div>
       

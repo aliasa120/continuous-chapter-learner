@@ -1,179 +1,296 @@
 
-import { GoogleGenerativeAI } from '@google/generative-ai';
-import { TranscriptionLine, WordTimestamp } from '../types/transcription';
-import { apiRateLimit } from './apiRateLimit';
+import { GoogleGenAI } from '@google/genai';
 
-interface TranscriptionOptions {
+export interface TranscriptionLine {
+  timestamp: string;
+  text: string;
+  startTime: number;
+  endTime: number;
+  speaker?: string;
+  confidence?: number;
+}
+
+export interface TranscriptionOptions {
   file: File;
   language: string;
 }
 
-// Convert file to base64
+const HARDCODED_API_KEY = 'AIzaSyDcvqkBlNTX1mhT6y7e-BK6Ix-AdCbR95A';
+
+export const transcribeWithGemini = async ({ file, language }: TranscriptionOptions): Promise<TranscriptionLine[]> => {
+  try {
+    console.log('Starting enhanced transcription with Gemini 2.5 Flash model');
+    console.log('Target language:', language, 'File:', file.name);
+    
+    const ai = new GoogleGenAI({
+      apiKey: HARDCODED_API_KEY,
+    });
+
+    const config = {
+      thinkingConfig: {
+        thinkingBudget: 0, // Non-thinking mode for faster processing
+      },
+      responseMimeType: 'text/plain',
+    };
+
+    const model = 'gemini-2.5-flash-preview-05-20';
+
+    // Convert file to base64
+    const fileData = await fileToBase64(file);
+    
+    const targetLanguage = getLanguageName(language);
+    console.log('Target language for transcription:', targetLanguage);
+    
+    const enhancedPrompt = `You are an expert AI transcription and translation system with advanced capabilities.
+
+TASK: Transcribe and translate the audio/video content with maximum accuracy.
+
+TARGET LANGUAGE: ${targetLanguage}
+
+CRITICAL REQUIREMENTS:
+1. TRANSCRIBE every word spoken in the audio/video
+2. TRANSLATE all content to ${targetLanguage} language (even if some parts are already in ${targetLanguage})
+3. IDENTIFY different speakers with high accuracy (Speaker A, Speaker B, etc.)
+4. PROVIDE precise timestamps for perfect audio synchronization
+5. ESTIMATE confidence levels for each segment
+6. HANDLE overlapping speech and background noise intelligently
+7. MAINTAIN context and meaning during translation
+
+OUTPUT FORMAT (EXACTLY as shown):
+[00:00-00:05] Speaker A (95%): [Translated text in ${targetLanguage}]
+[00:05-00:12] Speaker B (92%): [Translated text in ${targetLanguage}]
+[00:12-00:18] Speaker A (98%): [Translated text in ${targetLanguage}]
+
+ENHANCED FEATURES:
+- Use start-end timestamps for better synchronization
+- Include confidence percentages in parentheses
+- Detect speaker changes automatically
+- Handle multiple languages in source audio
+- Preserve emotional tone and context in translation
+- Filter out background noise descriptions
+
+CRITICAL: ALL output text must be in ${targetLanguage} language regardless of source language.`;
+
+    const contents = [
+      {
+        role: 'user',
+        parts: [
+          {
+            text: enhancedPrompt,
+          },
+          {
+            inlineData: {
+              mimeType: file.type,
+              data: fileData
+            }
+          }
+        ],
+      },
+    ];
+
+    console.log('Sending enhanced transcription request to Gemini 2.5 Flash...');
+
+    const response = await ai.models.generateContentStream({
+      model,
+      config,
+      contents,
+    });
+
+    let transcriptionText = '';
+    for await (const chunk of response) {
+      if (chunk.text) {
+        transcriptionText += chunk.text;
+      }
+    }
+    
+    console.log('Received enhanced transcription response:', transcriptionText);
+
+    const parsedLines = parseEnhancedTranscription(transcriptionText);
+    console.log('Parsed enhanced transcription lines:', parsedLines.length);
+    
+    return parsedLines;
+  } catch (error) {
+    console.error('Enhanced transcription error:', error);
+    if (error instanceof Error && error.message.includes('API_KEY')) {
+      throw new Error('API key authentication failed. Please contact support.');
+    }
+    throw new Error('Enhanced transcription failed. Please try again or contact support.');
+  }
+};
+
+const parseEnhancedTranscription = (text: string): TranscriptionLine[] => {
+  const lines = text.split('\n').filter(line => line.trim());
+  const transcriptionLines: TranscriptionLine[] = [];
+
+  lines.forEach((line, index) => {
+    console.log(`Parsing enhanced line ${index}:`, line);
+    
+    // Match enhanced patterns like [00:00-00:05] Speaker A (95%): text
+    const enhancedMatch = line.match(/\[(\d{1,2}:\d{2}(?::\d{2})?)-(\d{1,2}:\d{2}(?::\d{2})?)\]\s*(Speaker [A-Z]|Speaker \d+)\s*\((\d+)%\):\s*(.*)/i);
+    
+    if (enhancedMatch) {
+      const [, startTimeStr, endTimeStr, speaker, confidence, text] = enhancedMatch;
+      
+      if (text.trim()) {
+        const transcriptionLine = {
+          timestamp: `${formatTimestamp(startTimeStr)}-${formatTimestamp(endTimeStr)}`,
+          text: text.trim(),
+          startTime: parseTimeToSeconds(startTimeStr),
+          endTime: parseTimeToSeconds(endTimeStr),
+          speaker: speaker,
+          confidence: parseInt(confidence)
+        };
+        
+        console.log('Parsed enhanced line:', transcriptionLine);
+        transcriptionLines.push(transcriptionLine);
+      }
+    } else {
+      // Fallback to basic format parsing
+      const basicMatch = line.match(/\[(\d{1,2}:\d{2}(?::\d{2})?)\]/);
+      if (basicMatch) {
+        const timeStr = basicMatch[1];
+        const restOfLine = line.substring(basicMatch.index! + basicMatch[0].length).trim();
+        
+        const speakerMatch = restOfLine.match(/^(Speaker [A-Z]|Speaker \d+):\s*(.*)/i);
+        let speaker: string | undefined;
+        let text: string;
+
+        if (speakerMatch) {
+          speaker = speakerMatch[1];
+          text = speakerMatch[2];
+        } else {
+          text = restOfLine.replace(/^:\s*/, '');
+        }
+
+        if (text.trim()) {
+          const startTime = parseTimeToSeconds(timeStr);
+          const transcriptionLine = {
+            timestamp: formatTimestamp(timeStr),
+            text: text.trim(),
+            startTime,
+            endTime: startTime + 5, // Default 5-second duration
+            speaker,
+            confidence: 90 // Default confidence
+          };
+          
+          console.log('Parsed basic line:', transcriptionLine);
+          transcriptionLines.push(transcriptionLine);
+        }
+      }
+    }
+  });
+
+  return transcriptionLines;
+};
+
+const getLanguageName = (lang: string): string => {
+  const languageNames: { [key: string]: string } = {
+    'en': 'English',
+    'es': 'Spanish',
+    'fr': 'French',
+    'de': 'German',
+    'it': 'Italian',
+    'pt': 'Portuguese',
+    'ru': 'Russian',
+    'ja': 'Japanese',
+    'ko': 'Korean',
+    'zh': 'Chinese',
+    'ar': 'Arabic',
+    'hi': 'Hindi',
+    'bn': 'Bengali',
+    'ur': 'Urdu',
+    'ta': 'Tamil',
+    'te': 'Telugu',
+    'mr': 'Marathi',
+    'gu': 'Gujarati',
+    'kn': 'Kannada',
+    'ml': 'Malayalam',
+    'pa': 'Punjabi',
+    'or': 'Odia',
+    'as': 'Assamese',
+    'sd': 'Sindhi',
+    'si': 'Sinhala',
+    'my': 'Myanmar (Burmese)',
+    'th': 'Thai',
+    'vi': 'Vietnamese',
+    'id': 'Indonesian',
+    'ms': 'Malay',
+    'tl': 'Tagalog',
+    'sw': 'Swahili',
+    'am': 'Amharic',
+    'ha': 'Hausa',
+    'yo': 'Yoruba',
+    'ig': 'Igbo',
+    'zu': 'Zulu',
+    'af': 'Afrikaans',
+    'nl': 'Dutch',
+    'sv': 'Swedish',
+    'da': 'Danish',
+    'no': 'Norwegian',
+    'fi': 'Finnish',
+    'et': 'Estonian',
+    'lv': 'Latvian',
+    'lt': 'Lithuanian',
+    'pl': 'Polish',
+    'cs': 'Czech',
+    'sk': 'Slovak',
+    'hu': 'Hungarian',
+    'ro': 'Romanian',
+    'bg': 'Bulgarian',
+    'hr': 'Croatian',
+    'sr': 'Serbian',
+    'bs': 'Bosnian',
+    'mk': 'Macedonian',
+    'sq': 'Albanian',
+    'el': 'Greek',
+    'tr': 'Turkish',
+    'az': 'Azerbaijani',
+    'ka': 'Georgian',
+    'hy': 'Armenian',
+    'he': 'Hebrew',
+    'fa': 'Persian',
+    'ku': 'Kurdish',
+    'ps': 'Pashto',
+    'uz': 'Uzbek',
+    'kk': 'Kazakh',
+    'ky': 'Kyrgyz',
+    'tg': 'Tajik',
+    'mn': 'Mongolian',
+    'ne': 'Nepali',
+    'km': 'Khmer',
+    'lo': 'Lao'
+  };
+  
+  return languageNames[lang] || 'English';
+};
+
+const parseTimeToSeconds = (timeStr: string): number => {
+  const parts = timeStr.split(':').map(Number);
+  if (parts.length === 2) {
+    return parts[0] * 60 + parts[1];
+  } else if (parts.length === 3) {
+    return parts[0] * 3600 + parts[1] * 60 + parts[2];
+  }
+  return 0;
+};
+
+const formatTimestamp = (timeStr: string): string => {
+  const parts = timeStr.split(':');
+  if (parts.length === 2) {
+    return `00:${timeStr}`;
+  }
+  return timeStr;
+};
+
 const fileToBase64 = (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.readAsDataURL(file);
     reader.onload = () => {
-      if (typeof reader.result === 'string') {
-        const base64 = reader.result.split(',')[1];
-        resolve(base64);
-      } else {
-        reject(new Error('Failed to convert file to base64'));
-      }
+      const result = reader.result as string;
+      const base64 = result.split(',')[1];
+      resolve(base64);
     };
     reader.onerror = error => reject(error);
   });
-};
-
-// Parse timestamp to seconds
-const parseTimestamp = (timestamp: string): number => {
-  const parts = timestamp.split(':');
-  if (parts.length === 2) {
-    const [minutes, seconds] = parts.map(parseFloat);
-    return minutes * 60 + seconds;
-  } else if (parts.length === 3) {
-    const [hours, minutes, seconds] = parts.map(parseFloat);
-    return hours * 3600 + minutes * 60 + seconds;
-  }
-  return 0;
-};
-
-// Generate word-level timestamps (approximation)
-const generateWordTimestamps = (text: string, startTime: number, endTime: number): WordTimestamp[] => {
-  const words = text.split(' ').filter(word => word.trim());
-  const duration = endTime - startTime;
-  const wordsPerSecond = words.length / duration;
-  
-  return words.map((word, index) => {
-    const wordDuration = 1 / wordsPerSecond;
-    const wordStartTime = startTime + (index * wordDuration);
-    const wordEndTime = wordStartTime + wordDuration;
-    
-    return {
-      word: word.trim(),
-      startTime: wordStartTime,
-      endTime: Math.min(wordEndTime, endTime),
-      confidence: 95
-    };
-  });
-};
-
-// Clean and extract JSON from response
-const extractAndCleanJSON = (text: string): any => {
-  // Remove markdown code blocks
-  let cleanedText = text.replace(/```json\s*/g, '').replace(/```\s*/g, '');
-  
-  // Find JSON object
-  const jsonMatch = cleanedText.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) {
-    throw new Error('No JSON found in response');
-  }
-  
-  let jsonStr = jsonMatch[0];
-  
-  // Fix common JSON issues
-  jsonStr = jsonStr
-    .replace(/,\s*}/g, '}') // Remove trailing commas
-    .replace(/,\s*]/g, ']') // Remove trailing commas in arrays
-    .replace(/\n/g, ' ') // Replace newlines with spaces
-    .replace(/\s+/g, ' '); // Replace multiple spaces with single space
-  
-  try {
-    return JSON.parse(jsonStr);
-  } catch (error) {
-    console.error('JSON parsing failed, attempting to fix...', error);
-    
-    // Try to fix quotes
-    jsonStr = jsonStr.replace(/([{,]\s*)([a-zA-Z_][a-zA-Z0-9_]*)\s*:/g, '$1"$2":');
-    
-    return JSON.parse(jsonStr);
-  }
-};
-
-export const transcribeWithGemini = async ({ file, language }: TranscriptionOptions): Promise<TranscriptionLine[]> => {
-  try {
-    const apiKey = apiRateLimit.getAvailableApiKey();
-    
-    if (!apiKey) {
-      throw new Error('Service temporarily unavailable. Please try again in a minute.');
-    }
-
-    console.log('Converting file to base64...');
-    const base64Data = await fileToBase64(file);
-    
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
-    
-    const prompt = `Transcribe this ${file.type.startsWith('audio/') ? 'audio' : 'video'} file and provide results in this exact JSON format:
-
-{
-  "transcription": [
-    {
-      "timestamp": "MM:SS",
-      "startTime": 0,
-      "endTime": 5,
-      "text": "transcribed text here",
-      "speaker": "Speaker 1",
-      "confidence": 95
-    }
-  ]
-}
-
-Requirements:
-- Break into natural sentence segments (3-8 seconds each)
-- Include accurate timestamps in seconds
-- Add speaker identification if multiple speakers
-- Provide confidence scores (80-99)
-- Target language: ${language === 'en' ? 'English' : language}
-- Return ONLY valid JSON, no markdown or extra text`;
-
-    console.log('Sending request to AI...');
-    const result = await model.generateContent([
-      {
-        inlineData: {
-          mimeType: file.type,
-          data: base64Data
-        }
-      },
-      { text: prompt }
-    ]);
-
-    apiRateLimit.incrementUsage();
-    
-    const response = await result.response;
-    const text = response.text();
-    
-    console.log('Raw AI response:', text);
-    
-    const parsedResponse = extractAndCleanJSON(text);
-    
-    if (!parsedResponse.transcription || !Array.isArray(parsedResponse.transcription)) {
-      throw new Error('Invalid transcription format in response');
-    }
-    
-    // Process the transcription data
-    const transcriptionLines: TranscriptionLine[] = parsedResponse.transcription.map((item: any, index: number) => {
-      const startTime = typeof item.startTime === 'number' ? item.startTime : parseTimestamp(item.timestamp);
-      const endTime = typeof item.endTime === 'number' ? item.endTime : startTime + 5;
-      
-      const words = generateWordTimestamps(item.text, startTime, endTime);
-      
-      return {
-        text: item.text || '',
-        timestamp: item.timestamp || `${Math.floor(startTime / 60)}:${String(Math.floor(startTime % 60)).padStart(2, '0')}`,
-        startTime,
-        endTime,
-        speaker: item.speaker || (index === 0 ? 'Speaker 1' : undefined),
-        confidence: typeof item.confidence === 'number' ? item.confidence : 95,
-        words
-      };
-    });
-    
-    console.log('Processed transcription lines:', transcriptionLines);
-    return transcriptionLines;
-    
-  } catch (error) {
-    console.error('Transcription error:', error);
-    throw new Error(error instanceof Error ? error.message : 'Transcription failed');
-  }
 };
