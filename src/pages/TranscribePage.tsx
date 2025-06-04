@@ -1,13 +1,14 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import FileUpload from '../components/FileUpload';
 import LanguageSelector from '../components/LanguageSelector';
-import TranscriptionResult from '../components/TranscriptionResult';
+import MobileTranscriptionResult from '../components/MobileTranscriptionResult';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Wand2, Sparkles, Zap } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { transcribeWithGemini, type TranscriptionLine } from '../utils/geminiTranscription';
+import { transcribeWithGemini } from '../utils/geminiTranscription';
+import { TranscriptionLine } from '../types/transcription';
+import { apiRateLimit } from '../utils/apiRateLimit';
 
 const TranscribePage = () => {
   const [file, setFile] = useState<File | null>(null);
@@ -41,6 +42,16 @@ const TranscribePage = () => {
       return;
     }
 
+    const remaining = apiRateLimit.getRemainingRequests();
+    if (remaining.daily <= 0 || remaining.minute <= 0) {
+      toast({
+        title: "Rate limit exceeded",
+        description: "Please wait before making another request.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsTranscribing(true);
     setTranscriptionLines([]);
     
@@ -56,8 +67,8 @@ const TranscribePage = () => {
       setTranscriptionLines(results);
       
       toast({
-        title: "Enhanced Transcription Complete!",
-        description: `Successfully transcribed ${results.length} segments with speaker identification and confidence scoring.`,
+        title: "Transcription Complete!",
+        description: `Successfully transcribed ${results.length} segments with word-level timing.`,
       });
     } catch (error) {
       console.error('Enhanced transcription failed:', error);
@@ -214,42 +225,39 @@ const TranscribePage = () => {
     return null;
   };
 
+  const remaining = apiRateLimit.getRemainingRequests();
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 to-white py-4 sm:py-12">
+    <div className="min-h-screen bg-gradient-to-br from-green-50 to-white py-4">
       <div className="container mx-auto px-4">
-        <div className="mb-4 sm:mb-8">
+        <div className="mb-4">
           <Link to="/" className="inline-flex items-center text-green-600 hover:text-green-800 transition-colors">
             <ArrowLeft className="h-4 w-4 mr-1" />
             Back to home
           </Link>
         </div>
 
-        <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-6 sm:mb-8 text-center bg-gradient-to-r from-green-600 to-emerald-500 bg-clip-text text-transparent">
-          AI-Powered Enhanced Transcription & Translation
+        <h1 className="text-2xl sm:text-3xl font-bold mb-6 text-center bg-gradient-to-r from-green-600 to-emerald-500 bg-clip-text text-transparent">
+          AI Transcription & Analysis
         </h1>
 
         <div className="max-w-6xl mx-auto">
-          {/* Enhanced layout with new features */}
-          <div className="flex flex-col lg:flex-row gap-4 sm:gap-6">
-            {/* Enhanced Transcription Wizard Card */}
-            <div className="w-full lg:w-1/2 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl shadow-lg text-white p-4 sm:p-6 transform transition-all hover:-translate-y-1 hover:shadow-xl">
+          <div className="flex flex-col lg:flex-row gap-4">
+            {/* Transcription Wizard Card */}
+            <div className="w-full lg:w-1/2 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl shadow-lg text-white p-4">
               <div className="flex items-center mb-4">
                 <div className="bg-white/20 p-2 rounded-lg mr-3">
-                  <Zap className="h-4 w-4 sm:h-5 sm:w-5 text-white" /> 
+                  <Zap className="h-4 w-4 text-white" /> 
                 </div>
-                <h2 className="text-lg sm:text-xl font-bold">
-                  Enhanced AI Transcription Engine
+                <h2 className="text-lg font-bold">
+                  AI Transcription Engine
                 </h2>
               </div>
-              <div className="bg-white/10 rounded-lg p-3 mb-4">
-                <p className="text-xs text-green-100 mb-2">🚀 Powered by Gemini 2.5 Flash Preview</p>
-                <p className="text-xs text-green-100">✨ Enhanced Features: Speaker Diarization • Confidence Scoring • Precise Timing • Multi-language Support</p>
-              </div>
-              <p className="mb-4 sm:mb-6 text-green-50 text-sm sm:text-base">
-                Advanced AI transcription with real-time translation, speaker identification, and enhanced synchronization capabilities.
+              <p className="mb-4 text-green-50 text-sm">
+                Advanced AI transcription with word-level highlighting, explanation, and summarization.
               </p>
               
-              <div className="space-y-4 sm:space-y-6">
+              <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-green-50 mb-1">
                     Upload Media File
@@ -259,40 +267,44 @@ const TranscribePage = () => {
                 
                 <LanguageSelector language={language} setLanguage={setLanguage} />
                 
+                <div className="text-xs text-green-100 bg-white/10 rounded p-2">
+                  Requests remaining: {remaining.daily}/500 daily, {remaining.minute}/10 per minute
+                </div>
+                
                 <Button 
                   onClick={handleTranscribe} 
-                  disabled={!file || isTranscribing}
-                  className="w-full bg-white text-green-700 hover:bg-green-50 h-10 sm:h-11"
+                  disabled={!file || isTranscribing || remaining.daily <= 0 || remaining.minute <= 0}
+                  className="w-full bg-white text-green-700 hover:bg-green-50 h-10"
                 >
                   {isTranscribing ? 
-                    <span className="flex items-center text-sm sm:text-base">
+                    <span className="flex items-center text-sm">
                       <div className="w-4 h-4 border-2 border-t-transparent border-green-700 rounded-full animate-spin mr-2"></div>
-                      Enhanced AI Processing...
+                      AI Processing...
                     </span> : 
-                    <span className="flex items-center text-sm sm:text-base">
+                    <span className="flex items-center text-sm">
                       <Sparkles className="mr-2 h-4 w-4" />
-                      Start Enhanced Transcription
+                      Start Transcription
                     </span>
                   }
                 </Button>
               </div>
             </div>
             
-            {/* Enhanced Results Card */}
-            <div className="w-full lg:w-1/2 bg-white rounded-xl shadow-lg border border-green-100 transform transition-all hover:shadow-xl">
-              <div className="p-4 sm:p-6 border-b border-green-100 bg-green-50">
-                <h2 className="text-lg sm:text-xl font-bold text-green-800 flex items-center">
-                  <Sparkles className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
-                  Enhanced Results with Confidence Scoring
+            {/* Results Card */}
+            <div className="w-full lg:w-1/2 bg-white rounded-xl shadow-lg border border-green-100">
+              <div className="p-4 border-b border-green-100 bg-green-50">
+                <h2 className="text-lg font-bold text-green-800 flex items-center">
+                  <Sparkles className="mr-2 h-4 w-4 text-green-600" />
+                  Smart Results
                 </h2>
                 {duration > 0 && (
                   <p className="text-sm text-green-600 mt-1">
-                    Media Duration: {Math.floor(duration / 60)}:{String(Math.floor(duration % 60)).padStart(2, '0')}
+                    Duration: {Math.floor(duration / 60)}:{String(Math.floor(duration % 60)).padStart(2, '0')}
                   </p>
                 )}
               </div>
               
-              <TranscriptionResult
+              <MobileTranscriptionResult
                 transcriptionLines={transcriptionLines}
                 isTranscribing={isTranscribing}
                 currentTime={currentTime}
@@ -301,10 +313,6 @@ const TranscribePage = () => {
                 onPlayPause={handlePlayPause}
               />
             </div>
-          </div>
-          
-          <div className="mt-4 sm:mt-6 text-center text-xs sm:text-sm text-gray-500 bg-green-50 p-3 sm:p-4 rounded-lg border border-green-100">
-            🎯 Enhanced with Gemini 2.5 Flash • Speaker Diarization • Confidence Scoring • Precise Synchronization • 100+ Languages Supported
           </div>
         </div>
       </div>
