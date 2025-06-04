@@ -1,3 +1,4 @@
+
 import Groq from 'groq-sdk';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
@@ -23,211 +24,205 @@ export interface TranscriptionOptions {
 const GROQ_API_KEY = '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';
 const GEMINI_API_KEY = 'AIzaSyDcvqkBlNTX1mhT6y7e-BK6Ix-AdCbR95A';
 
+// Language detection mapping for common languages
+const getLanguageCode = (language: string): string => {
+  const languageCodes: { [key: string]: string } = {
+    'en': 'en',
+    'es': 'es', 
+    'fr': 'fr',
+    'de': 'de',
+    'it': 'it',
+    'pt': 'pt',
+    'ru': 'ru',
+    'ja': 'ja',
+    'ko': 'ko',
+    'zh': 'zh',
+    'ar': 'ar',
+    'hi': 'hi',
+    'ur': 'ur',
+    'bn': 'bn',
+    'ta': 'ta',
+    'te': 'te',
+    'mr': 'mr',
+    'gu': 'gu',
+    'kn': 'kn',
+    'ml': 'ml',
+    'pa': 'pa',
+    'or': 'or',
+    'as': 'as',
+    'tr': 'tr',
+    'fa': 'fa',
+    'th': 'th',
+    'vi': 'vi',
+    'id': 'id',
+    'ms': 'ms'
+  };
+  
+  return languageCodes[language] || language;
+};
+
 export const transcribeWithGroqAndGemini = async ({ file, language }: TranscriptionOptions): Promise<TranscriptionLine[]> => {
   try {
-    console.log('=== STARTING COMPREHENSIVE TRANSCRIPTION PROCESS ===');
+    console.log('=== STARTING GROQ + GEMINI TRANSCRIPTION PROCESS ===');
     console.log('Target language:', language, 'File:', file.name);
     
-    // Step 1: Use Groq for initial transcription in original language WITHOUT timestamps
+    // Step 1: Use Groq for transcription with word-level timestamps
     const groq = new Groq({
       apiKey: GROQ_API_KEY,
       dangerouslyAllowBrowser: true,
     });
 
-    console.log('Step 1: Transcribing with Groq Whisper (full text without timestamps)...');
+    console.log('Step 1: Getting complete transcription from Groq Whisper with timestamps...');
     
-    // Get full transcription without timestamps first
     const transcription = await groq.audio.transcriptions.create({
       file: file,
       model: "whisper-large-v3-turbo",
       response_format: "verbose_json",
-      // No timestamp granularities for clean text
+      timestamp_granularities: ["word", "segment"],
       temperature: 0.0,
     });
 
     console.log('✓ Groq transcription completed successfully');
+    console.log('Raw transcription data:', transcription);
     
-    // Step 2: Extract the full text without timestamps
-    let fullText = '';
-    if (transcription.text) {
-      fullText = transcription.text.trim();
-    } else if ((transcription as any).segments) {
-      fullText = (transcription as any).segments.map((segment: any) => segment.text.trim()).join(' ');
+    // Step 2: Parse segments from Groq response
+    const groqSegments = parseGroqTranscription(transcription);
+    console.log('✓ Parsed', groqSegments.length, 'segments from Groq');
+    
+    if (groqSegments.length === 0) {
+      throw new Error('No transcription segments received from Groq');
+    }
+
+    // Step 3: Detect original language and check if translation is needed
+    const originalLanguage = (transcription as any).language || 'en';
+    const targetLanguageCode = getLanguageCode(language);
+    
+    console.log('Original language detected:', originalLanguage);
+    console.log('Target language requested:', targetLanguageCode);
+    
+    // If languages are the same, return original transcription directly
+    if (originalLanguage === targetLanguageCode || originalLanguage === language) {
+      console.log('✓ Languages match - returning original transcription without translation');
+      return groqSegments;
     }
     
-    console.log('Full transcription text (without timestamps):', fullText);
-
-    // Step 3: Translate the full text using Gemini
-    const targetLanguageName = getLanguageName(language);
-    console.log('Step 2: Translating full text to', targetLanguageName);
+    // Step 4: Translation needed - prepare full transcript for Gemini
+    console.log('Step 2: Languages differ - preparing translation with Gemini...');
     
+    const fullTranscript = groqSegments.map(segment => segment.text).join(' ');
+    const segmentTimestamps = groqSegments.map(segment => ({
+      start: segment.startTime,
+      end: segment.endTime,
+      originalText: segment.text
+    }));
+    
+    console.log('Full transcript to translate:', fullTranscript);
+    
+    // Step 5: Use Gemini for translation with strict instructions
     const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
     const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
-
-    const translationPrompt = `You are a professional translator. Translate the following text to ${targetLanguageName}.
-
-CRITICAL INSTRUCTIONS:
-1. Translate the text accurately to ${targetLanguageName}
-2. If the source is already in ${targetLanguageName}, improve clarity and grammar but keep the meaning
-3. Maintain the original meaning and context
-4. Return ONLY the translated text without any additional comments
-5. Preserve the natural flow and tone of speech
-
-Text to translate to ${targetLanguageName}:
-"${fullText}"
-
-Translated text in ${targetLanguageName}:`;
-
-    console.log(`🔄 Sending translation request to Gemini...`);
     
-    const result = await model.generateContent(translationPrompt);
-    const translatedFullText = result.response.text().trim();
+    const targetLanguageName = getLanguageName(language);
+    
+    const strictTranslationPrompt = `You are a PROFESSIONAL TRANSLATOR for a transcription app. Your ONLY job is to translate text accurately.
+
+CRITICAL RULES:
+1. This is a TRANSCRIPTION APP - preserve ALL content exactly
+2. NEVER summarize, reduce, or omit any text
+3. NEVER add explanations or additional content
+4. Translate EVERY word and sentence completely
+5. Maintain the same number of sentences and structure
+6. Preserve natural speech patterns and conversational tone
+7. If already in target language, improve clarity but keep all content
+
+TRANSCRIPT TO TRANSLATE:
+Original Language: ${originalLanguage}
+Target Language: ${targetLanguageName}
+Number of segments: ${groqSegments.length}
+
+Full transcript:
+"${fullTranscript}"
+
+TRANSLATE TO ${targetLanguageName} - Keep ALL content, same length, same meaning:`;
+
+    console.log('🔄 Sending translation request to Gemini...');
+    
+    const result = await model.generateContent(strictTranslationPrompt);
+    const translatedText = result.response.text().trim();
     
     console.log('✓ Translation completed');
-    console.log('Translated text:', translatedFullText);
-
-    // Step 4: Get the audio duration for timestamp generation
-    console.log('Step 3: Getting audio duration for timestamp generation...');
+    console.log('Translated text:', translatedText);
     
-    // Get total duration of the audio from the initial transcription
-    const totalDuration = (transcription as any).duration || 0;
-    console.log('✓ Audio duration:', totalDuration, 'seconds');
+    // Step 6: Split translated text back into segments
+    console.log('Step 3: Mapping translated text back to timestamps...');
     
-    // We don't need segments from original transcript anymore
-    const groqSegments: TranscriptionLine[] = [];
-    console.log('✓ Will generate timestamps for translated text');
-
-    // Step 5: Generate timestamps for the translated text
-    console.log('Step 4: Generating timestamps for translated text...');
+    // Split translated text into sentences using multiple delimiters
+    const sentences = translatedText.split(/([.!?।؟][\\s]|[.!?।؟]$)/).filter(s => s.trim());
     
-    // Create translated segments with generated timestamps
-    const translatedSegments: TranscriptionLine[] = [];
-    
-    // Split translated text into sentences for natural segmentation
-    // Using a regex that matches end of sentences (period, exclamation, question mark followed by space or end of string)
-    const sentenceRegex = /([.!?]\s|[.!?]$)/;
-    const translatedSentences = translatedFullText.split(sentenceRegex).filter(Boolean);
-    
-    console.log(`Found ${translatedSentences.length} sentences in translated text`);
-    
-    // If we have no sentences (unlikely), create a single segment with the full text
-    if (translatedSentences.length === 0) {
-      translatedSegments.push({
-        timestamp: `00:00-${formatTime(totalDuration)}`,
-        text: translatedFullText,
-        startTime: 0,
-        endTime: totalDuration,
-        confidence: 100, // Fixed confidence for generated timestamps
-      });
-    } else {
-      // Determine how to split the sentences into segments
-      // For short audio (<30s), use fewer segments
-      // For longer audio, aim for segments of 5-15 seconds each
-      
-      const idealSegmentCount = Math.max(
-        2,
-        Math.min(
-          20, // Don't create too many segments
-          Math.ceil(totalDuration / 10) // Roughly one segment per 10 seconds
-        )
-      );
-      
-      // Calculate how many sentences should go in each segment
-      const sentencesPerSegment = Math.max(1, Math.ceil(translatedSentences.length / idealSegmentCount));
-      
-      console.log(`Creating approximately ${idealSegmentCount} segments with ~${sentencesPerSegment} sentences each`);
-      
-      // Group sentences into segments
-      let currentSegmentText = '';
-      let sentenceCount = 0;
-      let segmentStartTime = 0;
-      
-      // Calculate the duration per character to distribute time proportionally
-      const durationPerChar = totalDuration / translatedFullText.length;
-      
-      for (let i = 0; i < translatedSentences.length; i++) {
-        const sentence = translatedSentences[i];
-        currentSegmentText += sentence;
-        sentenceCount++;
-        
-        const isLastSentence = i === translatedSentences.length - 1;
-        
-        // End segment if we've reached the target sentence count or it's the last sentence
-        if (isLastSentence || sentenceCount >= sentencesPerSegment) {
-          // Calculate end time based on text length proportion
-          const segmentLength = currentSegmentText.length;
-          const segmentDuration = segmentLength * durationPerChar;
-          const segmentEndTime = Math.min(segmentStartTime + segmentDuration, totalDuration);
-          
-          // Create a new segment with generated timestamp
-          translatedSegments.push({
-            timestamp: `${formatTime(segmentStartTime)}-${formatTime(segmentEndTime)}`,
-            text: currentSegmentText.trim(),
-            startTime: segmentStartTime,
-            endTime: segmentEndTime,
-            confidence: 100, // Fixed confidence for generated timestamps
-          });
-          
-          console.log(`Generated Segment ${translatedSegments.length}:`);
-          console.log(`  Timestamp: ${formatTime(segmentStartTime)}-${formatTime(segmentEndTime)}`);
-          console.log(`  Translated (${targetLanguageName}): "${currentSegmentText.trim()}"`);
-          
-          // Reset for next segment
-          segmentStartTime = segmentEndTime;
-          currentSegmentText = '';
-          sentenceCount = 0;
-        }
+    // Combine sentences back properly
+    const translatedSentences: string[] = [];
+    for (let i = 0; i < sentences.length; i += 2) {
+      const sentence = sentences[i];
+      const delimiter = sentences[i + 1] || '';
+      if (sentence && sentence.trim()) {
+        translatedSentences.push((sentence + delimiter).trim());
       }
     }
     
-    // If we somehow ended up with no segments, create a single segment with the full text
-    if (translatedSegments.length === 0) {
-      translatedSegments.push({
-        timestamp: `00:00-${formatTime(totalDuration)}`,
-        text: translatedFullText,
-        startTime: 0,
-        endTime: totalDuration,
-        confidence: 100,
-      });
-    }
-
-    console.log('✓ Created translated segments with timestamps');
-    console.log('✓ Final segments count:', translatedSegments.length);
+    console.log('Split into', translatedSentences.length, 'translated sentences');
+    console.log('Original segments:', groqSegments.length);
     
-    // Step 6: Add word-level timestamps to the translated segments
-    console.log('Step 5: Adding word-level timestamps to translated segments...');
+    // Step 7: Map translated sentences to original timestamps
+    const finalSegments: TranscriptionLine[] = [];
     
-    // Process each segment to add word-level timestamps
-    const finalSegments = translatedSegments.map((segment) => {
-      // Split the translated text into words
-      const translatedWords = segment.text.split(/\s+/).filter(Boolean);
-      
-      // Calculate duration per word based on segment duration
-      const segmentDuration = segment.endTime - segment.startTime;
-      const wordDuration = translatedWords.length > 0 ? segmentDuration / translatedWords.length : 0;
-      
-      // Generate evenly distributed word-level timestamps
-      const words = translatedWords.map((word, wordIndex) => {
-        const startTime = segment.startTime + (wordDuration * wordIndex);
-        const endTime = Math.min(startTime + wordDuration, segment.endTime);
+    if (translatedSentences.length === groqSegments.length) {
+      // Perfect match - direct mapping
+      for (let i = 0; i < groqSegments.length; i++) {
+        const originalSegment = groqSegments[i];
+        const translatedText = translatedSentences[i];
         
-        return {
-          word,
-          start: startTime,
-          end: endTime,
-        };
-      });
+        finalSegments.push({
+          ...originalSegment,
+          text: translatedText,
+          words: generateWordsFromTranslation(translatedText, originalSegment.startTime, originalSegment.endTime)
+        });
+      }
+    } else {
+      // Different counts - proportionally distribute
+      console.log('Sentence count mismatch - using proportional distribution');
       
-      return {
-        ...segment,
-        words,
-      };
-    });
+      const wordsPerOriginalSegment = groqSegments.map(s => s.text.split(/\s+/).length);
+      const totalOriginalWords = wordsPerOriginalSegment.reduce((a, b) => a + b, 0);
+      const translatedWords = translatedText.split(/\s+/);
+      
+      let translatedWordIndex = 0;
+      
+      for (let i = 0; i < groqSegments.length; i++) {
+        const originalSegment = groqSegments[i];
+        const originalWordCount = wordsPerOriginalSegment[i];
+        const proportionalTranslatedWords = Math.round((originalWordCount / totalOriginalWords) * translatedWords.length);
+        
+        const segmentTranslatedWords = translatedWords.slice(
+          translatedWordIndex, 
+          translatedWordIndex + proportionalTranslatedWords
+        );
+        translatedWordIndex += proportionalTranslatedWords;
+        
+        const segmentTranslatedText = segmentTranslatedWords.join(' ');
+        
+        finalSegments.push({
+          ...originalSegment,
+          text: segmentTranslatedText,
+          words: generateWordsFromTranslation(segmentTranslatedText, originalSegment.startTime, originalSegment.endTime)
+        });
+      }
+    }
     
-    console.log('✓ Added word-level timestamps to translated segments');
+    console.log('✓ Created', finalSegments.length, 'translated segments with timestamps');
     console.log('=== TRANSCRIPTION PROCESS COMPLETED SUCCESSFULLY ===');
     
     return finalSegments;
+    
   } catch (error) {
     console.error('❌ Transcription error:', error);
     throw new Error('Transcription failed. Please check your API keys and try again.');
@@ -238,7 +233,7 @@ const parseGroqTranscription = (transcription: any): TranscriptionLine[] => {
   const segments: TranscriptionLine[] = [];
   
   if (transcription.segments) {
-    transcription.segments.forEach((segment: any, index: number) => {
+    transcription.segments.forEach((segment: any) => {
       if (segment.text && segment.text.trim()) {
         // Extract word-level timestamps if available
         const words = transcription.words?.filter((word: any) => 
@@ -262,6 +257,18 @@ const parseGroqTranscription = (transcription: any): TranscriptionLine[] => {
   }
   
   return segments;
+};
+
+const generateWordsFromTranslation = (text: string, startTime: number, endTime: number) => {
+  const words = text.split(/\s+/).filter(Boolean);
+  const duration = endTime - startTime;
+  const wordDuration = words.length > 0 ? duration / words.length : 0;
+  
+  return words.map((word, index) => ({
+    word,
+    start: startTime + (wordDuration * index),
+    end: startTime + (wordDuration * (index + 1)),
+  }));
 };
 
 const getLanguageName = (lang: string): string => {
