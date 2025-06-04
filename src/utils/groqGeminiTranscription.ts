@@ -1,4 +1,3 @@
-
 import Groq from 'groq-sdk';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
@@ -81,57 +80,46 @@ export const transcribeWithGroqAndGemini = async ({ file, language }: Transcript
       return originalSegments;
     }
     
-    // Step 4: Translation needed - use Gemini to translate each segment
-    console.log('Step 2: Translation needed - using Gemini...');
+    // Step 4: Translation needed - Get FULL text and translate it completely
+    console.log('Step 2: Translation needed - using Gemini for full text translation...');
     
     const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
     const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
     
     const targetLanguageName = getLanguageName(language);
     
-    // Create structured prompt for timestamp-by-timestamp translation
-    const segmentsForTranslation = originalSegments.map((segment, index) => 
-      `[${index + 1}] ${segment.timestamp}: ${segment.text}`
-    ).join('\n');
+    // Get the complete original text
+    const fullOriginalText = originalSegments.map(segment => segment.text).join(' ');
     
-    const strictTranslationPrompt = `You are a PROFESSIONAL TRANSLATOR for a TRANSCRIPTION APP. 
+    // Create a strict translation prompt for the FULL text
+    const fullTextTranslationPrompt = `You are a PROFESSIONAL TRANSLATOR for a TRANSCRIPTION APPLICATION.
 
-CRITICAL RULES FOR TRANSCRIPTION TRANSLATION:
-1. This is a TRANSCRIPTION APP - preserve ALL content exactly
-2. NEVER summarize, reduce, or omit any text
-3. NEVER add explanations or additional content  
-4. Translate EVERY segment completely and accurately
-5. Maintain the EXACT same number of segments
-6. Preserve ALL timestamps in the EXACT same format
-7. Keep the same structure: [Number] Timestamp: Translated_Text
+CRITICAL INSTRUCTIONS:
+1. This is a TRANSCRIPTION - translate EVERY SINGLE WORD completely
+2. NEVER summarize, reduce, omit, or change the meaning
+3. NEVER add explanations or extra content
+4. Translate the COMPLETE text maintaining all details
+5. Keep the same speaking style and tone
+6. Preserve all numbers, names, and technical terms appropriately
 
-TRANSCRIPTION TO TRANSLATE:
-Source Language: ${detectedLanguage}
-Target Language: ${targetLanguageName}
-Total Segments: ${originalSegments.length}
+ORIGINAL TEXT (${detectedLanguage}):
+"${fullOriginalText}"
 
-SEGMENTS:
-${segmentsForTranslation}
+TRANSLATE TO ${targetLanguageName}:
+Provide ONLY the complete translation, nothing else.`;
 
-TRANSLATE each segment to ${targetLanguageName} keeping the EXACT format:
-[1] 00:00-00:05: [Translated text here]
-[2] 00:05-00:10: [Translated text here]
-etc.
-
-MAINTAIN ALL ${originalSegments.length} SEGMENTS:`;
-
-    console.log('🔄 Sending translation request to Gemini...');
+    console.log('🔄 Sending full text translation request to Gemini...');
     
-    const result = await model.generateContent(strictTranslationPrompt);
-    const translatedResponse = result.response.text().trim();
+    const result = await model.generateContent(fullTextTranslationPrompt);
+    const translatedFullText = result.response.text().trim();
     
-    console.log('✓ Translation completed');
-    console.log('Translated response:', translatedResponse);
+    console.log('✓ Full text translation completed');
+    console.log('Translated text:', translatedFullText);
     
-    // Step 5: Parse translated segments back to original structure
-    const translatedSegments = parseTranslatedSegments(translatedResponse, originalSegments);
+    // Step 5: Map translated text back to original segments with preserved timing
+    const translatedSegments = mapTranslationToSegments(translatedFullText, originalSegments);
     
-    console.log('✓ Parsed', translatedSegments.length, 'translated segments');
+    console.log('✓ Mapped', translatedSegments.length, 'translated segments');
     console.log('=== TRANSCRIPTION PROCESS COMPLETED ===');
     
     return translatedSegments;
@@ -172,34 +160,44 @@ const parseGroqTranscription = (transcription: any): TranscriptionLine[] => {
   return segments;
 };
 
-const parseTranslatedSegments = (translatedResponse: string, originalSegments: TranscriptionLine[]): TranscriptionLine[] => {
-  const lines = translatedResponse.split('\n').filter(line => line.trim());
+const mapTranslationToSegments = (translatedText: string, originalSegments: TranscriptionLine[]): TranscriptionLine[] => {
+  // Split the translated text into words
+  const translatedWords = translatedText.split(/\s+/).filter(Boolean);
+  const originalTotalWords = originalSegments.reduce((total, segment) => 
+    total + segment.text.split(/\s+/).filter(Boolean).length, 0
+  );
+  
   const translatedSegments: TranscriptionLine[] = [];
+  let translatedWordIndex = 0;
   
-  // Parse each translated line and match with original segment
-  lines.forEach((line, index) => {
-    if (index < originalSegments.length) {
-      const originalSegment = originalSegments[index];
-      
-      // Extract translated text from format: [1] 00:00-00:05: Translated text
-      const match = line.match(/\[\d+\]\s*[\d:.-]+\s*:\s*(.+)/);
-      const translatedText = match ? match[1].trim() : line.trim();
-      
-      // Create new segment with translated text but original timing
-      translatedSegments.push({
-        ...originalSegment,
-        text: translatedText,
-        words: generateWordsFromTranslation(translatedText, originalSegment.startTime, originalSegment.endTime)
-      });
-    }
+  // Distribute translated words proportionally across original segments
+  originalSegments.forEach((originalSegment, segmentIndex) => {
+    const originalWords = originalSegment.text.split(/\s+/).filter(Boolean);
+    const originalWordCount = originalWords.length;
+    
+    // Calculate how many translated words should go to this segment
+    const proportionalWordCount = Math.round((originalWordCount / originalTotalWords) * translatedWords.length);
+    const actualWordCount = Math.min(proportionalWordCount, translatedWords.length - translatedWordIndex);
+    
+    // Extract words for this segment
+    const segmentTranslatedWords = translatedWords.slice(translatedWordIndex, translatedWordIndex + actualWordCount);
+    const segmentTranslatedText = segmentTranslatedWords.join(' ');
+    
+    // Generate word-level timing for translated words
+    const translatedWordsWithTiming = generateWordsFromTranslation(
+      segmentTranslatedText, 
+      originalSegment.startTime, 
+      originalSegment.endTime
+    );
+    
+    translatedSegments.push({
+      ...originalSegment,
+      text: segmentTranslatedText || originalSegment.text, // Fallback to original if no translation
+      words: translatedWordsWithTiming,
+    });
+    
+    translatedWordIndex += actualWordCount;
   });
-  
-  // If we have fewer translated segments than original, fill remaining with original
-  while (translatedSegments.length < originalSegments.length) {
-    const missingIndex = translatedSegments.length;
-    const originalSegment = originalSegments[missingIndex];
-    translatedSegments.push(originalSegment);
-  }
   
   return translatedSegments;
 };
