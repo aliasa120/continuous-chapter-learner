@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
+
+import React, { useState, useRef } from 'react';
 import FileUpload from '../components/FileUpload';
 import LanguageSelector from '../components/LanguageSelector';
 import TranscriptionResult from '../components/TranscriptionResult';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 import { FileAudio, Sparkles, Wand2 } from 'lucide-react';
-import { transcribeWithGemini, type TranscriptionLine } from '../utils/geminiTranscription';
+import { transcribeWithGemini } from '../utils/geminiTranscription';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Play, Upload, Zap, Globe, MessageSquare, Brain } from "lucide-react";
