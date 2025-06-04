@@ -1,9 +1,8 @@
-
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Clipboard, ClipboardCheck, Play, Pause, User, Award, Clock } from 'lucide-react';
-import type { TranscriptionLine } from '../utils/geminiTranscription';
+import type { TranscriptionLine } from '../types/transcription';
 
 interface TranscriptionResultProps {
   transcriptionLines: TranscriptionLine[];
