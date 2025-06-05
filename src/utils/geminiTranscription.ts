@@ -1,4 +1,3 @@
-
 import { GoogleGenAI } from '@google/genai';
 
 export interface TranscriptionLine {
@@ -19,19 +18,12 @@ const HARDCODED_API_KEY = 'AIzaSyDcvqkBlNTX1mhT6y7e-BK6Ix-AdCbR95A';
 
 export const transcribeWithGemini = async ({ file, language }: TranscriptionOptions): Promise<TranscriptionLine[]> => {
   try {
-    console.log('Starting enhanced transcription with Gemini 2.5 Flash model');
+    console.log('Starting transcription with Gemini 2.5 Flash Preview');
     console.log('Target language:', language, 'File:', file.name);
     
     const ai = new GoogleGenAI({
       apiKey: HARDCODED_API_KEY,
     });
-
-    const config = {
-      thinkingConfig: {
-        thinkingBudget: 0, // Non-thinking mode for faster processing
-      },
-      responseMimeType: 'text/plain',
-    };
 
     const model = 'gemini-2.5-flash-preview-05-20';
 
@@ -88,12 +80,14 @@ CRITICAL: ALL output text must be in ${targetLanguage} language regardless of so
       },
     ];
 
-    console.log('Sending enhanced transcription request to Gemini 2.5 Flash...');
+    console.log('Sending transcription request to Gemini 2.5 Flash Preview...');
 
     const response = await ai.models.generateContentStream({
       model,
-      config,
       contents,
+      config: {
+        responseMimeType: 'text/plain'
+      }
     });
 
     let transcriptionText = '';
@@ -103,18 +97,18 @@ CRITICAL: ALL output text must be in ${targetLanguage} language regardless of so
       }
     }
     
-    console.log('Received enhanced transcription response:', transcriptionText);
+    console.log('Received transcription response:', transcriptionText);
 
     const parsedLines = parseEnhancedTranscription(transcriptionText);
-    console.log('Parsed enhanced transcription lines:', parsedLines.length);
+    console.log('Parsed transcription lines:', parsedLines.length);
     
     return parsedLines;
   } catch (error) {
-    console.error('Enhanced transcription error:', error);
+    console.error('Transcription error:', error);
     if (error instanceof Error && error.message.includes('API_KEY')) {
       throw new Error('API key authentication failed. Please contact support.');
     }
-    throw new Error('Enhanced transcription failed. Please try again or contact support.');
+    throw new Error('Transcription failed. Please try again or contact support.');
   }
 };
 

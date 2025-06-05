@@ -4,8 +4,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Play, Pause, FileText, Lightbulb, BookOpen, Copy, Check } from 'lucide-react';
+import { Play, Pause, FileText, Lightbulb, BookOpen, Copy, Check, Zap, ChevronDown, ChevronUp } from 'lucide-react';
 import WordHighlight from './WordHighlight';
+import ExpandableAICard from './ExpandableAICard';
 import { useAIAnalysis } from '../hooks/useAIAnalysis';
 import { useToast } from '@/hooks/use-toast';
 import type { TranscriptionLine } from '../utils/geminiTranscription';
@@ -29,6 +30,8 @@ const MobileTranscriptionResult: React.FC<MobileTranscriptionResultProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState('segments');
   const [copied, setCopied] = useState(false);
+  const [expandedSummary, setExpandedSummary] = useState(false);
+  const [expandedExplanation, setExpandedExplanation] = useState(false);
   const { generateAnalysis, isAnalyzing, analysis } = useAIAnalysis();
   const { toast } = useToast();
 
@@ -118,9 +121,9 @@ const MobileTranscriptionResult: React.FC<MobileTranscriptionResultProps> = ({
               <BookOpen className="h-3 w-3 mr-1" />
               Easy View
             </TabsTrigger>
-            <TabsTrigger value="ai" className="text-xs">
-              <Lightbulb className="h-3 w-3 mr-1" />
-              AI Insights
+            <TabsTrigger value="actions" className="text-xs">
+              <Zap className="h-3 w-3 mr-1" />
+              Actions
             </TabsTrigger>
           </TabsList>
 
@@ -181,17 +184,8 @@ const MobileTranscriptionResult: React.FC<MobileTranscriptionResultProps> = ({
                             >
                               <Copy className="h-3 w-3" />
                             </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-6 w-6 p-0"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleGenerateAnalysis();
-                              }}
-                            >
-                              <Lightbulb className="h-3 w-3" />
-                            </Button>
+                            <ExpandableAICard text={line.text} variant="summary" />
+                            <ExpandableAICard text={line.text} variant="explanation" />
                           </div>
                         </div>
                         
@@ -225,14 +219,18 @@ const MobileTranscriptionResult: React.FC<MobileTranscriptionResultProps> = ({
           <TabsContent value="easy" className="flex-1 m-0">
             <div className="flex items-center justify-between p-2 border-b bg-gray-50">
               <span className="text-sm font-medium">Full Transcript</span>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => copyToClipboard(getFullTranscript())}
-                className="h-7 px-2"
-              >
-                {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
-              </Button>
+              <div className="flex gap-1">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => copyToClipboard(getFullTranscript())}
+                  className="h-7 px-2"
+                >
+                  {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+                </Button>
+                <ExpandableAICard text={getFullTranscript()} variant="summary" />
+                <ExpandableAICard text={getFullTranscript()} variant="explanation" />
+              </div>
             </div>
             
             <ScrollArea className="flex-1">
@@ -247,9 +245,9 @@ const MobileTranscriptionResult: React.FC<MobileTranscriptionResultProps> = ({
             </ScrollArea>
           </TabsContent>
 
-          <TabsContent value="ai" className="flex-1 m-0">
+          <TabsContent value="actions" className="flex-1 m-0">
             <div className="flex items-center justify-between p-2 border-b bg-gray-50">
-              <span className="text-sm font-medium">AI Analysis</span>
+              <span className="text-sm font-medium">Action Items</span>
               <Button
                 variant="outline"
                 size="sm"
@@ -260,7 +258,7 @@ const MobileTranscriptionResult: React.FC<MobileTranscriptionResultProps> = ({
                 {isAnalyzing ? (
                   <div className="w-3 h-3 border-2 border-t-transparent border-gray-600 rounded-full animate-spin" />
                 ) : (
-                  <Lightbulb className="h-3 w-3" />
+                  <Zap className="h-3 w-3" />
                 )}
               </Button>
             </div>
@@ -268,27 +266,28 @@ const MobileTranscriptionResult: React.FC<MobileTranscriptionResultProps> = ({
             <ScrollArea className="flex-1">
               <div className="p-3 space-y-4">
                 {analysis ? (
-                  <>
-                    <div>
-                      <h4 className="text-sm font-semibold text-green-700 mb-2 flex items-center">
-                        <BookOpen className="h-3 w-3 mr-1" />
-                        Summary
-                      </h4>
-                      <p className="text-sm text-gray-700 leading-relaxed">{analysis.summary}</p>
-                    </div>
-                    
-                    <div>
-                      <h4 className="text-sm font-semibold text-blue-700 mb-2 flex items-center">
-                        <Lightbulb className="h-3 w-3 mr-1" />
-                        Explanation
-                      </h4>
-                      <p className="text-sm text-gray-700 leading-relaxed">{analysis.explanation}</p>
-                    </div>
-                  </>
+                  <div className="space-y-3">
+                    {analysis.actions && analysis.actions.length > 0 && (
+                      <div>
+                        <h4 className="text-sm font-semibold text-blue-700 mb-2 flex items-center">
+                          <Zap className="h-3 w-3 mr-1" />
+                          Action Items
+                        </h4>
+                        <ul className="space-y-1">
+                          {analysis.actions.map((action, index) => (
+                            <li key={index} className="text-sm text-gray-700 flex items-start">
+                              <span className="text-green-600 mr-2">•</span>
+                              <span>{action}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
                 ) : (
                   <div className="text-center text-gray-500">
-                    <Lightbulb className="h-8 w-8 mx-auto mb-2 text-gray-400" />
-                    <p className="text-sm">Generate AI analysis to see insights</p>
+                    <Zap className="h-8 w-8 mx-auto mb-2 text-gray-400" />
+                    <p className="text-sm">Generate analysis to see action items</p>
                   </div>
                 )}
               </div>
