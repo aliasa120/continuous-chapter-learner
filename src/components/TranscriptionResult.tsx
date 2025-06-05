@@ -3,6 +3,7 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Clipboard, ClipboardCheck, Play, Pause, User, Award, Clock } from 'lucide-react';
+import ExpandableAICard from './ExpandableAICard';
 import type { TranscriptionLine } from '../utils/geminiTranscription';
 
 interface TranscriptionResultProps {
@@ -72,10 +73,10 @@ const TranscriptionResult: React.FC<TranscriptionResultProps> = ({
         <div className="flex justify-center items-center h-full">
           <div className="text-center">
             <div className="w-12 h-12 sm:w-16 sm:h-16 mx-auto border-4 rounded-full border-l-green-600 border-r-green-300 border-b-green-600 border-t-green-300 animate-spin mb-4"></div>
-            <p className="text-gray-900 animate-pulse text-sm sm:text-base font-semibold">Enhanced AI Processing...</p>
-            <p className="text-xs sm:text-sm text-gray-600 mt-2">Speaker identification • Confidence scoring • Precise timing</p>
-            <div className="mt-4 bg-green-50 rounded-lg p-3">
-              <p className="text-xs text-green-700">🚀 Gemini 2.5 Flash Preview</p>
+            <p className="text-gray-900 dark:text-gray-100 animate-pulse text-sm sm:text-base font-semibold">Enhanced AI Processing...</p>
+            <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-2">Speaker identification • Confidence scoring • Precise timing</p>
+            <div className="mt-4 bg-green-50 dark:bg-green-900/30 rounded-lg p-3">
+              <p className="text-xs text-green-700 dark:text-green-400">🚀 Gemini 2.5 Flash Preview</p>
             </div>
           </div>
         </div>
@@ -86,11 +87,11 @@ const TranscriptionResult: React.FC<TranscriptionResultProps> = ({
   if (transcriptionLines.length === 0) {
     return (
       <div className="p-4 sm:p-6 h-80 sm:h-96 flex items-center justify-center text-center">
-        <div className="text-gray-600">
+        <div className="text-gray-600 dark:text-gray-400">
           <div className="text-4xl mb-4">🎯</div>
           <p className="mb-2 text-sm font-medium">Enhanced transcription results will appear here</p>
           <p className="text-xs">Upload a file and start enhanced AI transcription</p>
-          <div className="mt-4 text-xs text-green-600 bg-green-50 rounded-lg p-2">
+          <div className="mt-4 text-xs text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/30 rounded-lg p-2">
             Features: Speaker ID • Confidence • Sync • Translation
           </div>
         </div>
@@ -103,12 +104,12 @@ const TranscriptionResult: React.FC<TranscriptionResultProps> = ({
   return (
     <div className="flex flex-col h-80 sm:h-96">
       {/* Enhanced Controls Bar */}
-      <div className="flex justify-between items-center px-3 sm:px-6 py-2 border-b border-gray-200 bg-gray-50">
+      <div className="flex justify-between items-center px-3 sm:px-6 py-2 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
         <div className="flex items-center gap-2">
           <Button
             variant="outline"
             size="sm"
-            className="text-xs flex items-center gap-1 text-green-700 hover:bg-green-50 border-green-200 h-8"
+            className="text-xs flex items-center gap-1 text-green-700 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-800 border-green-200 dark:border-green-700 h-8"
             onClick={onPlayPause}
           >
             {isPlaying ? (
@@ -119,20 +120,20 @@ const TranscriptionResult: React.FC<TranscriptionResultProps> = ({
             <span className="hidden sm:inline">{isPlaying ? "Pause" : "Play"}</span>
           </Button>
           
-          <div className="hidden md:flex items-center gap-1 text-xs text-gray-600 bg-white rounded px-2 py-1">
+          <div className="hidden md:flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400 bg-white dark:bg-gray-700 rounded px-2 py-1">
             <Award className="h-3 w-3" />
             <span>Avg: {averageConfidence.toFixed(0)}%</span>
           </div>
         </div>
         
-        <div className="text-xs text-gray-500 hidden sm:block">
+        <div className="text-xs text-gray-500 dark:text-gray-400 hidden sm:block">
           {transcriptionLines.length} segments
         </div>
         
         <Button
           variant="outline"
           size="sm"
-          className="text-xs flex items-center gap-1 text-green-700 hover:bg-green-50 border-green-200 h-8"
+          className="text-xs flex items-center gap-1 text-green-700 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-800 border-green-200 dark:border-green-700 h-8"
           onClick={copyToClipboard}
         >
           {copied ? (
@@ -159,63 +160,63 @@ const TranscriptionResult: React.FC<TranscriptionResultProps> = ({
               <div 
                 key={index}
                 ref={isActive ? activeLineRef : null}
-                className={`rounded-lg border p-3 transition-all cursor-pointer ${
+                className={`rounded-lg border p-3 transition-all ${
                   isActive 
-                    ? 'border-green-500 shadow-md bg-green-50 ring-2 ring-green-200 transform scale-[1.02]' 
-                    : 'border-gray-200 hover:border-green-300 bg-white hover:shadow-sm'
+                    ? 'border-green-500 shadow-md bg-green-50 dark:bg-green-900/30 ring-2 ring-green-200 dark:ring-green-700 transform scale-[1.02]' 
+                    : 'border-gray-200 dark:border-gray-700 hover:border-green-300 dark:hover:border-green-600 bg-white dark:bg-gray-800 hover:shadow-sm'
                 }`}
-                onClick={() => seekToTimestamp(line.startTime)}
               >
                 <div className="flex flex-col">
                   {/* Enhanced Header Row */}
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-xs sm:text-sm font-mono text-green-700 bg-green-100 px-2 py-1 rounded flex items-center gap-1">
+                      <span className="text-xs sm:text-sm font-mono text-green-700 dark:text-green-400 bg-green-100 dark:bg-green-900/50 px-2 py-1 rounded flex items-center gap-1">
                         <Clock className="h-3 w-3" />
                         {line.timestamp}
                       </span>
                       {line.speaker && (
-                        <div className="flex items-center gap-1 text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded">
+                        <div className="flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/50 px-2 py-1 rounded">
                           <User className="h-3 w-3" />
                           <span>{line.speaker}</span>
                         </div>
                       )}
                       {line.confidence && (
-                        <div className={`flex items-center gap-1 text-xs px-2 py-1 rounded ${getConfidenceColor(line.confidence)} bg-gray-100`}>
+                        <div className={`flex items-center gap-1 text-xs px-2 py-1 rounded ${getConfidenceColor(line.confidence)} bg-gray-100 dark:bg-gray-800`}>
                           <Award className="h-3 w-3" />
                           <span>{getConfidenceIcon(line.confidence)} {line.confidence}%</span>
                         </div>
                       )}
                     </div>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className={`h-6 w-6 p-0 rounded-full ${
-                        isActive 
-                          ? 'text-green-700 border-green-500 bg-green-100 shadow-sm' 
-                          : 'hover:text-green-700 text-gray-500 border-gray-300'
-                      }`}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        seekToTimestamp(line.startTime);
-                      }}
-                    >
-                      <Play className="h-3 w-3" />
-                    </Button>
+                    <div className="flex items-center gap-1">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className={`h-6 w-6 p-0 rounded-full ${
+                          isActive 
+                            ? 'text-green-700 dark:text-green-400 border-green-500 dark:border-green-600 bg-green-100 dark:bg-green-900/50 shadow-sm' 
+                            : 'hover:text-green-700 dark:hover:text-green-400 text-gray-500 dark:text-gray-400 border-gray-300 dark:border-gray-600'
+                        }`}
+                        onClick={() => seekToTimestamp(line.startTime)}
+                      >
+                        <Play className="h-3 w-3" />
+                      </Button>
+                      <ExpandableAICard text={line.text} variant="summary" />
+                      <ExpandableAICard text={line.text} variant="explanation" />
+                    </div>
                   </div>
                   
                   {/* Enhanced Text Content */}
-                  <p className={`text-gray-900 text-sm sm:text-base leading-relaxed ${
-                    isActive ? 'font-medium text-green-900' : ''
+                  <p className={`text-gray-900 dark:text-gray-100 text-sm sm:text-base leading-relaxed ${
+                    isActive ? 'font-medium text-green-900 dark:text-green-100' : ''
                   }`}>
                     {line.text}
                   </p>
                   
                   {/* Progress bar for active line */}
                   {isActive && (
-                    <div className="mt-2 bg-green-200 rounded-full h-1 overflow-hidden">
+                    <div className="mt-2 bg-green-200 dark:bg-green-700 rounded-full h-1 overflow-hidden">
                       <div 
-                        className="bg-green-500 h-full transition-all duration-300"
+                        className="bg-green-500 dark:bg-green-400 h-full transition-all duration-300"
                         style={{
                           width: `${Math.min(100, ((currentTime - line.startTime) / (line.endTime - line.startTime)) * 100)}%`
                         }}

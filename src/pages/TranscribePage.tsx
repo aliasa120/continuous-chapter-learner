@@ -5,6 +5,7 @@ import MobileTranscriptionResult from '../components/MobileTranscriptionResult';
 import { Button } from '@/components/ui/button';
 import { Sparkles } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useTranscriptionHistory } from '../hooks/useTranscriptionHistory';
 import { transcribeWithGemini, type TranscriptionLine } from '../utils/geminiTranscription';
 
 const TranscribePage = () => {
@@ -19,6 +20,7 @@ const TranscribePage = () => {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const mediaUrlRef = useRef<string | null>(null);
   const { toast } = useToast();
+  const { addToHistory } = useTranscriptionHistory();
 
   useEffect(() => {
     return () => {
@@ -51,6 +53,15 @@ const TranscribePage = () => {
       
       console.log('Transcription completed, results:', results);
       setTranscriptionLines(results);
+      
+      // Save to history
+      addToHistory({
+        filename: file.name,
+        timestamp: new Date().toISOString(),
+        duration: duration || 0,
+        language,
+        transcriptionLines: results
+      });
       
       toast({
         title: "Transcription Complete!",
