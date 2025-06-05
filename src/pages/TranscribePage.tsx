@@ -3,9 +3,10 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import FileUpload from '../components/FileUpload';
 import LanguageSelector from '../components/LanguageSelector';
-import TranscriptionResult from '../components/TranscriptionResult';
+import MobileTranscriptionResult from '../components/MobileTranscriptionResult';
+import MobileNavigation from '../components/MobileNavigation';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Wand2, Sparkles, Zap } from 'lucide-react';
+import { ArrowLeft, Sparkles } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { transcribeWithGemini, type TranscriptionLine } from '../utils/geminiTranscription';
 
@@ -45,22 +46,22 @@ const TranscribePage = () => {
     setTranscriptionLines([]);
     
     try {
-      console.log('Starting enhanced transcription with file:', file.name, 'language:', language);
+      console.log('Starting transcription with file:', file.name, 'language:', language);
       
       const results = await transcribeWithGemini({
         file,
         language
       });
       
-      console.log('Enhanced transcription completed, results:', results);
+      console.log('Transcription completed, results:', results);
       setTranscriptionLines(results);
       
       toast({
-        title: "Enhanced Transcription Complete!",
-        description: `Successfully transcribed ${results.length} segments with speaker identification and confidence scoring.`,
+        title: "Transcription Complete!",
+        description: `Successfully transcribed ${results.length} segments with speaker identification.`,
       });
     } catch (error) {
-      console.error('Enhanced transcription failed:', error);
+      console.error('Transcription failed:', error);
       toast({
         title: "Transcription failed",
         description: error instanceof Error ? error.message : "An unexpected error occurred.",
@@ -149,7 +150,7 @@ const TranscribePage = () => {
     }
   }, [file]);
 
-  // Render media element with enhanced features
+  // Render media element
   const renderMediaElement = () => {
     if (!file || !mediaUrlRef.current) return null;
 
@@ -215,101 +216,72 @@ const TranscribePage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 to-white py-4 sm:py-12">
-      <div className="container mx-auto px-4">
-        <div className="mb-4 sm:mb-8">
+    <div className="min-h-screen bg-gradient-to-br from-green-50 to-white pb-20">
+      <div className="container mx-auto px-4 py-4">
+        <div className="mb-4">
           <Link to="/" className="inline-flex items-center text-green-600 hover:text-green-800 transition-colors">
             <ArrowLeft className="h-4 w-4 mr-1" />
             Back to home
           </Link>
         </div>
 
-        <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-6 sm:mb-8 text-center bg-gradient-to-r from-green-600 to-emerald-500 bg-clip-text text-transparent">
-          AI-Powered Enhanced Transcription & Translation
+        <h1 className="text-xl sm:text-2xl font-bold mb-6 text-center bg-gradient-to-r from-green-600 to-emerald-500 bg-clip-text text-transparent">
+          AI Transcription & Translation
         </h1>
 
-        <div className="max-w-6xl mx-auto">
-          {/* Enhanced layout with new features */}
-          <div className="flex flex-col lg:flex-row gap-4 sm:gap-6">
-            {/* Enhanced Transcription Wizard Card */}
-            <div className="w-full lg:w-1/2 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl shadow-lg text-white p-4 sm:p-6 transform transition-all hover:-translate-y-1 hover:shadow-xl">
-              <div className="flex items-center mb-4">
-                <div className="bg-white/20 p-2 rounded-lg mr-3">
-                  <Zap className="h-4 w-4 sm:h-5 sm:w-5 text-white" /> 
-                </div>
-                <h2 className="text-lg sm:text-xl font-bold">
-                  Enhanced AI Transcription Engine
-                </h2>
+        <div className="max-w-md mx-auto space-y-4">
+          {/* Mobile-optimized Upload Card */}
+          <div className="bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg shadow-lg text-white p-4">
+            <div className="flex items-center mb-3">
+              <div className="bg-white/20 p-2 rounded-lg mr-2">
+                <Sparkles className="h-4 w-4 text-white" /> 
               </div>
-              <div className="bg-white/10 rounded-lg p-3 mb-4">
-                <p className="text-xs text-green-100 mb-2">🚀 Powered by Gemini 2.5 Flash Preview</p>
-                <p className="text-xs text-green-100">✨ Enhanced Features: Speaker Diarization • Confidence Scoring • Precise Timing • Multi-language Support</p>
-              </div>
-              <p className="mb-4 sm:mb-6 text-green-50 text-sm sm:text-base">
-                Advanced AI transcription with real-time translation, speaker identification, and enhanced synchronization capabilities.
-              </p>
-              
-              <div className="space-y-4 sm:space-y-6">
-                <div>
-                  <label className="block text-sm font-medium text-green-50 mb-1">
-                    Upload Media File
-                  </label>
-                  <FileUpload file={file} setFile={setFile} />
-                </div>
-                
-                <LanguageSelector language={language} setLanguage={setLanguage} />
-                
-                <Button 
-                  onClick={handleTranscribe} 
-                  disabled={!file || isTranscribing}
-                  className="w-full bg-white text-green-700 hover:bg-green-50 h-10 sm:h-11"
-                >
-                  {isTranscribing ? 
-                    <span className="flex items-center text-sm sm:text-base">
-                      <div className="w-4 h-4 border-2 border-t-transparent border-green-700 rounded-full animate-spin mr-2"></div>
-                      Enhanced AI Processing...
-                    </span> : 
-                    <span className="flex items-center text-sm sm:text-base">
-                      <Sparkles className="mr-2 h-4 w-4" />
-                      Start Enhanced Transcription
-                    </span>
-                  }
-                </Button>
-              </div>
+              <h2 className="text-lg font-bold">AI Transcription</h2>
             </div>
             
-            {/* Enhanced Results Card */}
-            <div className="w-full lg:w-1/2 bg-white rounded-xl shadow-lg border border-green-100 transform transition-all hover:shadow-xl">
-              <div className="p-4 sm:p-6 border-b border-green-100 bg-green-50">
-                <h2 className="text-lg sm:text-xl font-bold text-green-800 flex items-center">
-                  <Sparkles className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
-                  Enhanced Results with Confidence Scoring
-                </h2>
-                {duration > 0 && (
-                  <p className="text-sm text-green-600 mt-1">
-                    Media Duration: {Math.floor(duration / 60)}:{String(Math.floor(duration % 60)).padStart(2, '0')}
-                  </p>
-                )}
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-green-50 mb-2">
+                  Upload Media File
+                </label>
+                <FileUpload file={file} setFile={setFile} />
               </div>
               
-              <TranscriptionResult
-                transcriptionLines={transcriptionLines}
-                isTranscribing={isTranscribing}
-                currentTime={currentTime}
-                seekToTimestamp={seekToTimestamp}
-                isPlaying={isPlaying}
-                onPlayPause={handlePlayPause}
-              />
+              <LanguageSelector language={language} setLanguage={setLanguage} />
+              
+              <Button 
+                onClick={handleTranscribe} 
+                disabled={!file || isTranscribing}
+                className="w-full bg-white text-green-700 hover:bg-green-50 h-10"
+              >
+                {isTranscribing ? 
+                  <span className="flex items-center text-sm">
+                    <div className="w-4 h-4 border-2 border-t-transparent border-green-700 rounded-full animate-spin mr-2"></div>
+                    AI Processing...
+                  </span> : 
+                  <span className="flex items-center text-sm">
+                    <Sparkles className="mr-2 h-4 w-4" />
+                    Start Transcription
+                  </span>
+                }
+              </Button>
             </div>
           </div>
           
-          <div className="mt-4 sm:mt-6 text-center text-xs sm:text-sm text-gray-500 bg-green-50 p-3 sm:p-4 rounded-lg border border-green-100">
-            🎯 Enhanced with Gemini 2.5 Flash • Speaker Diarization • Confidence Scoring • Precise Synchronization • 100+ Languages Supported
-          </div>
+          {/* Mobile-optimized Results */}
+          <MobileTranscriptionResult
+            transcriptionLines={transcriptionLines}
+            isTranscribing={isTranscribing}
+            currentTime={currentTime}
+            seekToTimestamp={seekToTimestamp}
+            isPlaying={isPlaying}
+            onPlayPause={handlePlayPause}
+          />
         </div>
       </div>
       
       {renderMediaElement()}
+      <MobileNavigation />
     </div>
   );
 };
