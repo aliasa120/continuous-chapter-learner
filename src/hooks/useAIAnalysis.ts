@@ -37,8 +37,8 @@ export const useAIAnalysis = () => {
         })
       ]);
 
-      const summary = summaryResponse.response.text() || 'No summary available';
-      const explanation = explanationResponse.response.text() || 'No explanation available';
+      const summary = summaryResponse.text() || 'No summary available';
+      const explanation = explanationResponse.text() || 'No explanation available';
 
       const result = { summary, explanation };
       setAnalysis(result);

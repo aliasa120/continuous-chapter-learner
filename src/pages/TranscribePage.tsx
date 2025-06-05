@@ -1,12 +1,9 @@
-
 import React, { useState, useRef, useEffect } from 'react';
-import { Link } from 'react-router-dom';
 import FileUpload from '../components/FileUpload';
 import LanguageSelector from '../components/LanguageSelector';
 import MobileTranscriptionResult from '../components/MobileTranscriptionResult';
-import MobileNavigation from '../components/MobileNavigation';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Sparkles } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { transcribeWithGemini, type TranscriptionLine } from '../utils/geminiTranscription';
 
@@ -23,7 +20,6 @@ const TranscribePage = () => {
   const mediaUrlRef = useRef<string | null>(null);
   const { toast } = useToast();
 
-  // Clean up media URL when component unmounts or file changes
   useEffect(() => {
     return () => {
       if (mediaUrlRef.current) {
@@ -123,18 +119,14 @@ const TranscribePage = () => {
     }
   };
 
-  // Create and manage media element
   useEffect(() => {
     if (file) {
-      // Clean up previous URL
       if (mediaUrlRef.current) {
         URL.revokeObjectURL(mediaUrlRef.current);
       }
       
-      // Create new URL
       mediaUrlRef.current = URL.createObjectURL(file);
       
-      // Reset media refs
       if (audioRef.current) {
         audioRef.current.src = '';
         audioRef.current = null;
@@ -150,7 +142,14 @@ const TranscribePage = () => {
     }
   }, [file]);
 
-  // Render media element
+  useEffect(() => {
+    return () => {
+      if (mediaUrlRef.current) {
+        URL.revokeObjectURL(mediaUrlRef.current);
+      }
+    };
+  }, [file]);
+
   const renderMediaElement = () => {
     if (!file || !mediaUrlRef.current) return null;
 
@@ -216,72 +215,67 @@ const TranscribePage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 to-white pb-20">
-      <div className="container mx-auto px-4 py-4">
-        <div className="mb-4">
-          <Link to="/" className="inline-flex items-center text-green-600 hover:text-green-800 transition-colors">
-            <ArrowLeft className="h-4 w-4 mr-1" />
-            Back to home
-          </Link>
-        </div>
-
-        <h1 className="text-xl sm:text-2xl font-bold mb-6 text-center bg-gradient-to-r from-green-600 to-emerald-500 bg-clip-text text-transparent">
+    <div className="container mx-auto px-4 py-6">
+      <div className="max-w-6xl mx-auto">
+        <h1 className="text-2xl md:text-3xl font-bold mb-8 text-center bg-gradient-to-r from-green-600 to-emerald-500 bg-clip-text text-transparent">
           AI Transcription & Translation
         </h1>
 
-        <div className="max-w-md mx-auto space-y-4">
-          {/* Mobile-optimized Upload Card */}
-          <div className="bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg shadow-lg text-white p-4">
-            <div className="flex items-center mb-3">
-              <div className="bg-white/20 p-2 rounded-lg mr-2">
-                <Sparkles className="h-4 w-4 text-white" /> 
-              </div>
-              <h2 className="text-lg font-bold">AI Transcription</h2>
-            </div>
-            
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-green-50 mb-2">
-                  Upload Media File
-                </label>
-                <FileUpload file={file} setFile={setFile} />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-1">
+            <div className="bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl shadow-lg text-white p-6 sticky top-6">
+              <div className="flex items-center mb-4">
+                <div className="bg-white/20 p-3 rounded-lg mr-3">
+                  <Sparkles className="h-6 w-6 text-white" /> 
+                </div>
+                <h2 className="text-xl font-bold">AI Transcription</h2>
               </div>
               
-              <LanguageSelector language={language} setLanguage={setLanguage} />
-              
-              <Button 
-                onClick={handleTranscribe} 
-                disabled={!file || isTranscribing}
-                className="w-full bg-white text-green-700 hover:bg-green-50 h-10"
-              >
-                {isTranscribing ? 
-                  <span className="flex items-center text-sm">
-                    <div className="w-4 h-4 border-2 border-t-transparent border-green-700 rounded-full animate-spin mr-2"></div>
-                    AI Processing...
-                  </span> : 
-                  <span className="flex items-center text-sm">
-                    <Sparkles className="mr-2 h-4 w-4" />
-                    Start Transcription
-                  </span>
-                }
-              </Button>
+              <div className="space-y-6">
+                <div>
+                  <label className="block text-sm font-medium text-green-50 mb-3">
+                    Upload Media File
+                  </label>
+                  <FileUpload file={file} setFile={setFile} />
+                </div>
+                
+                <LanguageSelector language={language} setLanguage={setLanguage} />
+                
+                <Button 
+                  onClick={handleTranscribe} 
+                  disabled={!file || isTranscribing}
+                  className="w-full bg-white text-green-700 hover:bg-green-50 h-12"
+                  size="lg"
+                >
+                  {isTranscribing ? 
+                    <span className="flex items-center">
+                      <div className="w-5 h-5 border-2 border-t-transparent border-green-700 rounded-full animate-spin mr-3"></div>
+                      AI Processing...
+                    </span> : 
+                    <span className="flex items-center">
+                      <Sparkles className="mr-3 h-5 w-5" />
+                      Start Transcription
+                    </span>
+                  }
+                </Button>
+              </div>
             </div>
           </div>
           
-          {/* Mobile-optimized Results */}
-          <MobileTranscriptionResult
-            transcriptionLines={transcriptionLines}
-            isTranscribing={isTranscribing}
-            currentTime={currentTime}
-            seekToTimestamp={seekToTimestamp}
-            isPlaying={isPlaying}
-            onPlayPause={handlePlayPause}
-          />
+          <div className="lg:col-span-2">
+            <MobileTranscriptionResult
+              transcriptionLines={transcriptionLines}
+              isTranscribing={isTranscribing}
+              currentTime={currentTime}
+              seekToTimestamp={seekToTimestamp}
+              isPlaying={isPlaying}
+              onPlayPause={handlePlayPause}
+            />
+          </div>
         </div>
       </div>
       
       {renderMediaElement()}
-      <MobileNavigation />
     </div>
   );
 };
