@@ -1,12 +1,14 @@
+
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Play, Pause, RotateCcw, Download, FileAudio, Loader2, CheckCircle, AlertCircle, Clock, Users } from 'lucide-react';
+import { Download, FileAudio, Loader2, CheckCircle, AlertCircle, Clock, Users } from 'lucide-react';
 import FileUpload from '../components/FileUpload';
 import LanguageSelector from '../components/LanguageSelector';
+import VideoPlayer from '../components/VideoPlayer';
 import TranscriptionResult from '../components/TranscriptionResult';
 import MobileTranscriptionResult from '../components/MobileTranscriptionResult';
 import { transcribeWithGemini, type TranscriptionLine } from '../utils/geminiTranscription';
@@ -28,7 +30,6 @@ const TranscribePage = () => {
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [dailyCount, setDailyCount] = useState(0);
   
-  const audioRef = useRef<HTMLAudioElement>(null);
   const { addToHistory } = useTranscriptionHistory();
   const { autoPlay, saveTranscripts } = useSettings();
   const { toast } = useToast();
@@ -109,7 +110,6 @@ const TranscribePage = () => {
       setTranscriptionLines(result);
       setProgress(100);
       
-      // Record the transcription
       await recordTranscription(file.name);
       setDailyCount(prev => prev + 1);
       
@@ -128,10 +128,6 @@ const TranscribePage = () => {
         description: `Successfully transcribed ${file.name}`,
       });
 
-      if (autoPlay && audioRef.current) {
-        audioRef.current.play();
-        setIsPlaying(true);
-      }
     } catch (error) {
       console.error('Transcription error:', error);
       toast({
@@ -145,28 +141,15 @@ const TranscribePage = () => {
   };
 
   const handlePlayPause = () => {
-    if (audioRef.current) {
-      if (isPlaying) {
-        audioRef.current.pause();
-      } else {
-        audioRef.current.play();
-      }
-      setIsPlaying(!isPlaying);
-    }
+    setIsPlaying(!isPlaying);
   };
 
   const handleRestart = () => {
-    if (audioRef.current) {
-      audioRef.current.currentTime = 0;
-      setCurrentTime(0);
-    }
+    setCurrentTime(0);
   };
 
   const seekToTimestamp = (seconds: number) => {
-    if (audioRef.current) {
-      audioRef.current.currentTime = seconds;
-      setCurrentTime(seconds);
-    }
+    setCurrentTime(seconds);
   };
 
   const exportTranscription = () => {
@@ -189,29 +172,23 @@ const TranscribePage = () => {
     });
   };
 
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
-
   const remainingTranscriptions = DAILY_LIMIT - dailyCount;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5 py-6">
-      <div className="container mx-auto px-4 max-w-7xl">
-        <div className="mb-8">
+    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5 py-4 sm:py-6">
+      <div className="container mx-auto px-3 sm:px-4 max-w-7xl">
+        <div className="mb-6 sm:mb-8">
           <div className="flex items-center justify-between flex-wrap gap-4">
             <div>
-              <h1 className="text-3xl md:text-4xl font-bold mb-2 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+              <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-2 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
                 AI Transcription Studio
               </h1>
-              <p className="text-muted-foreground">Upload your audio or video file and get accurate transcriptions</p>
+              <p className="text-muted-foreground text-sm sm:text-base">Upload your audio or video file and get accurate transcriptions</p>
             </div>
             
             {user && (
               <Card className="border-primary/20 bg-gradient-to-r from-primary/5 to-secondary/5 backdrop-blur">
-                <CardContent className="p-4">
+                <CardContent className="p-3 sm:p-4">
                   <div className="flex items-center gap-3">
                     <div className="flex items-center gap-2">
                       <Clock className="h-4 w-4 text-primary" />
@@ -239,13 +216,13 @@ const TranscribePage = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
           {/* Upload and Controls */}
-          <div className="lg:col-span-1 space-y-6">
-            <Card className="border-primary/20 shadow-lg bg-card/50 backdrop-blur">
-              <CardHeader className="pb-4">
-                <CardTitle className="flex items-center gap-2 text-primary">
-                  <FileAudio className="h-5 w-5" />
+          <div className="lg:col-span-1 space-y-4 sm:space-y-6">
+            <Card className="border-primary/20 shadow-lg bg-card backdrop-blur">
+              <CardHeader className="pb-3 sm:pb-4">
+                <CardTitle className="flex items-center gap-2 text-primary text-base sm:text-lg">
+                  <FileAudio className="h-4 w-4 sm:h-5 sm:w-5" />
                   Upload File
                 </CardTitle>
               </CardHeader>
@@ -253,16 +230,33 @@ const TranscribePage = () => {
                 <FileUpload file={file} setFile={handleFileSelect} />
                 {file && (
                   <div className="flex items-center gap-2 p-3 bg-primary/10 rounded-lg border border-primary/20">
-                    <CheckCircle className="h-4 w-4 text-primary" />
+                    <CheckCircle className="h-4 w-4 text-primary flex-shrink-0" />
                     <span className="text-sm font-medium text-foreground truncate">{file.name}</span>
                   </div>
                 )}
               </CardContent>
             </Card>
 
-            <Card className="border-secondary/20 shadow-lg bg-card/50 backdrop-blur">
-              <CardHeader className="pb-4">
-                <CardTitle className="text-secondary">Configuration</CardTitle>
+            {/* Player moved above language selection */}
+            {audioUrl && (
+              <VideoPlayer
+                file={file}
+                audioUrl={audioUrl}
+                currentTime={currentTime}
+                duration={duration}
+                isPlaying={isPlaying}
+                onTimeUpdate={setCurrentTime}
+                onLoadedMetadata={setDuration}
+                onEnded={() => setIsPlaying(false)}
+                onPlayPause={handlePlayPause}
+                onRestart={handleRestart}
+                seekToTimestamp={seekToTimestamp}
+              />
+            )}
+
+            <Card className="border-secondary/20 shadow-lg bg-card backdrop-blur">
+              <CardHeader className="pb-3 sm:pb-4">
+                <CardTitle className="text-secondary text-base sm:text-lg">Configuration</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
@@ -272,58 +266,15 @@ const TranscribePage = () => {
               </CardContent>
             </Card>
 
-            {/* Audio Player */}
-            {audioUrl && (
-              <Card className="border-primary/20 shadow-lg bg-card/50 backdrop-blur">
-                <CardHeader className="pb-4">
-                  <CardTitle className="text-primary">Audio Player</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <audio
-                    ref={audioRef}
-                    src={audioUrl}
-                    onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
-                    onLoadedMetadata={(e) => setDuration(e.currentTarget.duration)}
-                    onEnded={() => setIsPlaying(false)}
-                    className="hidden"
-                  />
-                  
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handlePlayPause}
-                      className="border-primary text-primary hover:bg-primary/10"
-                    >
-                      {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleRestart}
-                      className="border-secondary text-secondary hover:bg-secondary/10"
-                    >
-                      <RotateCcw className="h-4 w-4" />
-                    </Button>
-                    <div className="text-xs text-muted-foreground">
-                      {formatTime(currentTime)} / {formatTime(duration)}
-                    </div>
-                  </div>
-                  
-                  <Progress value={(currentTime / duration) * 100} className="h-2" />
-                </CardContent>
-              </Card>
-            )}
-
             {/* Transcribe Button */}
             <Button
               onClick={handleTranscribe}
               disabled={!file || isTranscribing || !user || dailyCount >= DAILY_LIMIT}
-              className="w-full bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90 text-white py-6 text-lg rounded-xl shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90 text-white py-4 sm:py-6 text-base sm:text-lg rounded-xl shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isTranscribing ? (
                 <>
-                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                  <Loader2 className="mr-2 h-4 w-4 sm:h-5 sm:w-5 animate-spin" />
                   Transcribing... {progress}%
                 </>
               ) : dailyCount >= DAILY_LIMIT ? (
@@ -365,13 +316,13 @@ const TranscribePage = () => {
 
           {/* Results */}
           <div className="lg:col-span-2">
-            <Card className="border-primary/20 shadow-lg bg-card/50 backdrop-blur">
-              <CardHeader className="pb-4">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="flex items-center gap-2 text-primary">
+            <Card className="border-primary/20 shadow-lg bg-card backdrop-blur">
+              <CardHeader className="pb-3 sm:pb-4">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <CardTitle className="flex items-center gap-2 text-primary text-base sm:text-lg">
                     Transcription Results
                     {transcriptionLines.length > 0 && (
-                      <Badge variant="secondary" className="bg-primary/10 text-primary">
+                      <Badge variant="secondary" className="bg-primary/10 text-primary text-xs">
                         {transcriptionLines.length} segments
                       </Badge>
                     )}
@@ -381,9 +332,9 @@ const TranscribePage = () => {
                       variant="outline"
                       size="sm"
                       onClick={exportTranscription}
-                      className="border-secondary text-secondary hover:bg-secondary/10"
+                      className="border-secondary text-secondary hover:bg-secondary/10 text-xs sm:text-sm"
                     >
-                      <Download className="h-4 w-4 mr-2" />
+                      <Download className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                       Export
                     </Button>
                   )}
