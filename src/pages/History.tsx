@@ -17,19 +17,19 @@ const History = () => {
   const [selectedLanguage, setSelectedLanguage] = useState('all');
 
   const filteredHistory = history.filter(item => {
-    const matchesSearch = item.fileName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         item.transcription.some(line => line.text.toLowerCase().includes(searchTerm.toLowerCase()));
+    const matchesSearch = item.filename.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         item.transcriptionLines.some(line => line.text.toLowerCase().includes(searchTerm.toLowerCase()));
     const matchesLanguage = selectedLanguage === 'all' || item.language === selectedLanguage;
     return matchesSearch && matchesLanguage;
   });
 
   const exportTranscription = (item: any) => {
-    const text = item.transcription.map((line: any) => line.text).join(' ');
+    const text = item.transcriptionLines.map((line: any) => line.text).join(' ');
     const blob = new Blob([text], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${item.fileName}_transcription.txt`;
+    a.download = `${item.filename}_transcription.txt`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -66,10 +66,10 @@ const History = () => {
   const uniqueLanguages = Array.from(new Set(history.map(item => item.language)));
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-accent/5 py-6">
+    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5 py-6">
       <div className="container mx-auto px-4 max-w-6xl">
         <div className="mb-8">
-          <h1 className="text-3xl md:text-4xl font-bold mb-2 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+          <h1 className="text-3xl md:text-4xl font-bold mb-2 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
             Transcription History
           </h1>
           <p className="text-muted-foreground">View and manage your past transcriptions</p>
@@ -124,9 +124,9 @@ const History = () => {
                 <div className="text-sm text-muted-foreground">Total Transcriptions</div>
               </CardContent>
             </Card>
-            <Card className="border-accent/20 shadow-lg bg-card/50 backdrop-blur">
+            <Card className="border-secondary/20 shadow-lg bg-card/50 backdrop-blur">
               <CardContent className="p-4 text-center">
-                <div className="text-2xl font-bold text-accent">{uniqueLanguages.length}</div>
+                <div className="text-2xl font-bold text-secondary">{uniqueLanguages.length}</div>
                 <div className="text-sm text-muted-foreground">Languages Used</div>
               </CardContent>
             </Card>
@@ -165,7 +165,7 @@ const History = () => {
                   <div className="flex items-center justify-between">
                     <CardTitle className="flex items-center gap-2 text-lg text-foreground">
                       <FileAudio className="h-5 w-5 text-primary" />
-                      {item.fileName}
+                      {item.filename}
                     </CardTitle>
                     <div className="flex items-center gap-2">
                       <Badge variant="secondary" className="bg-primary/10 text-primary">
@@ -175,7 +175,7 @@ const History = () => {
                         variant="outline"
                         size="sm"
                         onClick={() => exportTranscription(item)}
-                        className="border-accent text-accent hover:bg-accent/10"
+                        className="border-secondary text-secondary hover:bg-secondary/10"
                       >
                         <Download className="h-4 w-4" />
                       </Button>
@@ -194,7 +194,7 @@ const History = () => {
                   <div className="flex items-center gap-4 text-sm text-muted-foreground mb-3">
                     <div className="flex items-center gap-1">
                       <Clock className="h-4 w-4" />
-                      {format(new Date(item.timestamp), 'MMM dd, yyyy HH:mm')}
+                      {format(new Date(item.createdAt), 'MMM dd, yyyy HH:mm')}
                     </div>
                     {item.duration && (
                       <div className="flex items-center gap-1">
@@ -203,15 +203,15 @@ const History = () => {
                       </div>
                     )}
                     <Badge variant="outline" className="border-primary/30 text-primary">
-                      {item.transcription.length} segments
+                      {item.transcriptionLines.length} segments
                     </Badge>
                   </div>
                   <Separator className="mb-3" />
                   <div className="text-sm text-foreground leading-relaxed max-h-24 overflow-hidden">
-                    {item.transcription.slice(0, 3).map((line, index) => (
+                    {item.transcriptionLines.slice(0, 3).map((line, index) => (
                       <span key={index}>{line.text} </span>
                     ))}
-                    {item.transcription.length > 3 && (
+                    {item.transcriptionLines.length > 3 && (
                       <span className="text-muted-foreground">...</span>
                     )}
                   </div>

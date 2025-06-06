@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -15,7 +14,7 @@ import { transcribeWithGemini, type TranscriptionLine } from '../utils/geminiTra
 import { useTranscriptionHistory } from '../hooks/useTranscriptionHistory';
 import { useSettings } from '../contexts/SettingsContext';
 import { useToast } from '@/hooks/use-toast';
-import { useMobile } from '@/hooks/use-mobile';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 const TranscribePage = () => {
   const [file, setFile] = useState<File | null>(null);
@@ -33,7 +32,7 @@ const TranscribePage = () => {
   const { addToHistory } = useTranscriptionHistory();
   const { autoPlay, saveTranscripts } = useSettings();
   const { toast } = useToast();
-  const isMobile = useMobile();
+  const isMobile = useIsMobile();
 
   const handleFileSelect = useCallback((selectedFile: File) => {
     setFile(selectedFile);
@@ -77,10 +76,9 @@ const TranscribePage = () => {
       
       if (saveTranscripts) {
         addToHistory({
-          id: Date.now().toString(),
-          fileName: file.name,
-          transcription: result,
-          timestamp: new Date(),
+          filename: file.name,
+          transcriptionLines: result,
+          timestamp: new Date().toISOString(),
           language: language,
           duration: duration
         });
@@ -159,10 +157,10 @@ const TranscribePage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-accent/5 py-6">
+    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5 py-6">
       <div className="container mx-auto px-4 max-w-7xl">
         <div className="mb-8">
-          <h1 className="text-3xl md:text-4xl font-bold mb-2 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+          <h1 className="text-3xl md:text-4xl font-bold mb-2 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
             AI Transcription Studio
           </h1>
           <p className="text-muted-foreground">Upload your audio or video file and get accurate transcriptions</p>
@@ -179,7 +177,7 @@ const TranscribePage = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <FileUpload onFileSelect={handleFileSelect} />
+                <FileUpload file={file} setFile={setFile} />
                 {file && (
                   <div className="flex items-center gap-2 p-3 bg-primary/10 rounded-lg border border-primary/20">
                     <CheckCircle className="h-4 w-4 text-primary" />
@@ -189,18 +187,18 @@ const TranscribePage = () => {
               </CardContent>
             </Card>
 
-            <Card className="border-accent/20 shadow-lg bg-card/50 backdrop-blur">
+            <Card className="border-secondary/20 shadow-lg bg-card/50 backdrop-blur">
               <CardHeader className="pb-4">
-                <CardTitle className="text-accent">Configuration</CardTitle>
+                <CardTitle className="text-secondary">Configuration</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
                   <label className="text-sm font-medium text-foreground mb-2 block">Language</label>
-                  <LanguageSelector value={language} onChange={setLanguage} />
+                  <LanguageSelector language={language} setLanguage={setLanguage} />
                 </div>
                 <div>
                   <label className="text-sm font-medium text-foreground mb-2 block">API Key</label>
-                  <ApiKeyInput value={apiKey} onChange={setApiKey} />
+                  <ApiKeyInput apiKey={apiKey} setApiKey={setApiKey} />
                 </div>
               </CardContent>
             </Card>
@@ -234,7 +232,7 @@ const TranscribePage = () => {
                       variant="outline"
                       size="sm"
                       onClick={handleRestart}
-                      className="border-accent text-accent hover:bg-accent/10"
+                      className="border-secondary text-secondary hover:bg-secondary/10"
                     >
                       <RotateCcw className="h-4 w-4" />
                     </Button>
@@ -252,7 +250,7 @@ const TranscribePage = () => {
             <Button
               onClick={handleTranscribe}
               disabled={!file || !apiKey || isTranscribing}
-              className="w-full bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 text-white py-6 text-lg rounded-xl shadow-lg"
+              className="w-full bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90 text-white py-6 text-lg rounded-xl shadow-lg"
             >
               {isTranscribing ? (
                 <>
@@ -292,7 +290,7 @@ const TranscribePage = () => {
                       variant="outline"
                       size="sm"
                       onClick={exportTranscription}
-                      className="border-accent text-accent hover:bg-accent/10"
+                      className="border-secondary text-secondary hover:bg-secondary/10"
                     >
                       <Download className="h-4 w-4 mr-2" />
                       Export
