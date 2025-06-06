@@ -8,6 +8,7 @@ import { ThemeProvider } from "./contexts/ThemeContext";
 import Header from "./components/Header";
 import Home from "./pages/Home";
 import TranscribePage from "./pages/TranscribePage";
+import AuthPage from "./pages/AuthPage";
 import Privacy from "./pages/Privacy";
 import HowItWorks from "./pages/HowItWorks";
 import Terms from "./pages/Terms";
