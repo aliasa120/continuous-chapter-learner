@@ -2,7 +2,7 @@
 import React from 'react';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Segments, Eye, Zap } from 'lucide-react';
+import { Grid3X3, Eye, Zap } from 'lucide-react';
 import TranscriptionResult from './TranscriptionResult';
 import type { TranscriptionLine } from '../utils/geminiTranscription';
 
@@ -42,7 +42,7 @@ const MobileTranscriptionResult: React.FC<MobileTranscriptionResultProps> = ({
       <Tabs defaultValue="segments" className="h-full flex flex-col">
         <TabsList className="grid w-full grid-cols-3 bg-green-50 dark:bg-gray-800">
           <TabsTrigger value="segments" className="flex items-center gap-1 text-xs sm:text-sm">
-            <Segments className="h-3 w-3 sm:h-4 sm:w-4" />
+            <Grid3X3 className="h-3 w-3 sm:h-4 sm:w-4" />
             <span className="hidden sm:inline">Segments</span>
             <span className="sm:hidden">Seg</span>
             {transcriptionLines.length > 0 && (
