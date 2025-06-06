@@ -69,7 +69,10 @@ const TranscribePage = () => {
         setProgress(progress);
       };
 
-      const result = await transcribeWithGemini(file, apiKey, language, progressCallback);
+      const result = await transcribeWithGemini({
+        file: file,
+        language: language
+      });
       
       setTranscriptionLines(result);
       setProgress(100);
@@ -177,7 +180,7 @@ const TranscribePage = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <FileUpload file={file} setFile={setFile} />
+                <FileUpload file={file} setFile={handleFileSelect} />
                 {file && (
                   <div className="flex items-center gap-2 p-3 bg-primary/10 rounded-lg border border-primary/20">
                     <CheckCircle className="h-4 w-4 text-primary" />
