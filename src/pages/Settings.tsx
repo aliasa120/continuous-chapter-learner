@@ -1,12 +1,13 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
-import { Settings as SettingsIcon, Volume2, Palette, Globe, Shield, FileText, Download, Trash2, Moon, Sun, History } from 'lucide-react';
+import { Settings as SettingsIcon, Volume2, Palette, Globe, Shield, FileText, Download, Trash2, Moon, Sun, History, Eye, Award } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
+import { useSettings } from '../contexts/SettingsContext';
 import { useTranscriptionHistory } from '../hooks/useTranscriptionHistory';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
@@ -14,14 +15,22 @@ import { useToast } from '@/hooks/use-toast';
 const Settings = () => {
   const { theme, toggleTheme } = useTheme();
   const { history, clearHistory } = useTranscriptionHistory();
+  const {
+    autoPlay,
+    setAutoPlay,
+    autoScroll,
+    setAutoScroll,
+    showConfidence,
+    setShowConfidence,
+    defaultLanguage,
+    setDefaultLanguage,
+    notifications,
+    setNotifications,
+    saveTranscripts,
+    setSaveTranscripts
+  } = useSettings();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [autoPlay, setAutoPlay] = useState(false);
-  const [defaultLanguage, setDefaultLanguage] = useState('en');
-  const [notifications, setNotifications] = useState(true);
-  const [saveTranscripts, setSaveTranscripts] = useState(true);
-  const [autoScroll, setAutoScroll] = useState(true);
-  const [showConfidence, setShowConfidence] = useState(true);
 
   const handleClearHistory = () => {
     clearHistory();
@@ -66,17 +75,17 @@ const Settings = () => {
     <div className="container mx-auto px-4 py-6">
       <div className="max-w-4xl mx-auto">
         <div className="mb-8">
-          <h1 className="text-2xl md:text-3xl font-bold mb-2 bg-gradient-to-r from-green-600 to-emerald-500 bg-clip-text text-transparent">
+          <h1 className="text-3xl md:text-4xl font-bold mb-2 premium-gradient bg-clip-text text-transparent">
             Settings
           </h1>
-          <p className="text-gray-600 dark:text-gray-400">Customize your transcription experience</p>
+          <p className="text-muted-foreground">Customize your transcription experience</p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Appearance Settings */}
-          <Card className="border-green-200 dark:border-gray-700">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-purple-700 dark:text-purple-400">
+          <Card className="border-primary/20 shadow-lg">
+            <CardHeader className="pb-4">
+              <CardTitle className="flex items-center gap-2 text-primary">
                 <Palette className="h-5 w-5" />
                 Appearance
               </CardTitle>
@@ -84,8 +93,8 @@ const Settings = () => {
             <CardContent className="space-y-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="font-medium text-gray-900 dark:text-gray-100">Dark mode</p>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Switch between light and dark themes</p>
+                  <p className="font-medium">Dark mode</p>
+                  <p className="text-sm text-muted-foreground">Switch between light and dark themes</p>
                 </div>
                 <div className="flex items-center gap-2">
                   <Sun className="h-4 w-4 text-yellow-500" />
@@ -94,22 +103,28 @@ const Settings = () => {
                 </div>
               </div>
 
-              <Separator className="bg-gray-200 dark:bg-gray-700" />
+              <Separator />
 
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="font-medium text-gray-900 dark:text-gray-100">Auto-scroll to active line</p>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Automatically scroll to the currently playing segment</p>
+                  <p className="font-medium flex items-center gap-2">
+                    <Eye className="h-4 w-4" />
+                    Auto-scroll to active line
+                  </p>
+                  <p className="text-sm text-muted-foreground">Automatically scroll to the currently playing segment</p>
                 </div>
                 <Switch checked={autoScroll} onCheckedChange={setAutoScroll} />
               </div>
 
-              <Separator className="bg-gray-200 dark:bg-gray-700" />
+              <Separator />
 
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="font-medium text-gray-900 dark:text-gray-100">Show confidence scores</p>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Display AI confidence percentages</p>
+                  <p className="font-medium flex items-center gap-2">
+                    <Award className="h-4 w-4" />
+                    Show confidence scores
+                  </p>
+                  <p className="text-sm text-muted-foreground">Display AI confidence percentages</p>
                 </div>
                 <Switch checked={showConfidence} onCheckedChange={setShowConfidence} />
               </div>
@@ -117,9 +132,9 @@ const Settings = () => {
           </Card>
 
           {/* Audio & Playback Settings */}
-          <Card className="border-green-200 dark:border-gray-700">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-green-700 dark:text-green-400">
+          <Card className="border-accent/20 shadow-lg">
+            <CardHeader className="pb-4">
+              <CardTitle className="flex items-center gap-2 text-accent">
                 <Volume2 className="h-5 w-5" />
                 Audio & Playback
               </CardTitle>
@@ -127,16 +142,16 @@ const Settings = () => {
             <CardContent className="space-y-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="font-medium text-gray-900 dark:text-gray-100">Auto-play after transcription</p>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Automatically start playback when transcription completes</p>
+                  <p className="font-medium">Auto-play after transcription</p>
+                  <p className="text-sm text-muted-foreground">Automatically start playback when transcription completes</p>
                 </div>
                 <Switch checked={autoPlay} onCheckedChange={setAutoPlay} />
               </div>
 
-              <Separator className="bg-gray-200 dark:bg-gray-700" />
+              <Separator />
 
               <div className="space-y-2">
-                <label className="font-medium text-gray-900 dark:text-gray-100">Default transcription language</label>
+                <label className="font-medium">Default transcription language</label>
                 <Select value={defaultLanguage} onValueChange={setDefaultLanguage}>
                   <SelectTrigger>
                     <SelectValue />
@@ -156,12 +171,12 @@ const Settings = () => {
                 </Select>
               </div>
 
-              <Separator className="bg-gray-200 dark:bg-gray-700" />
+              <Separator />
 
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="font-medium text-gray-900 dark:text-gray-100">Notifications</p>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Get notified about transcription completion</p>
+                  <p className="font-medium">Notifications</p>
+                  <p className="text-sm text-muted-foreground">Get notified about transcription completion</p>
                 </div>
                 <Switch checked={notifications} onCheckedChange={setNotifications} />
               </div>
@@ -169,9 +184,9 @@ const Settings = () => {
           </Card>
 
           {/* Data & History Settings */}
-          <Card className="border-green-200 dark:border-gray-700">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-blue-700 dark:text-blue-400">
+          <Card className="border-success/20 shadow-lg">
+            <CardHeader className="pb-4">
+              <CardTitle className="flex items-center gap-2 text-success">
                 <Shield className="h-5 w-5" />
                 Data & History
               </CardTitle>
@@ -179,18 +194,18 @@ const Settings = () => {
             <CardContent className="space-y-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="font-medium text-gray-900 dark:text-gray-100">Save transcripts locally</p>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Keep transcription history on this device</p>
+                  <p className="font-medium">Save transcripts locally</p>
+                  <p className="text-sm text-muted-foreground">Keep transcription history on this device</p>
                 </div>
                 <Switch checked={saveTranscripts} onCheckedChange={setSaveTranscripts} />
               </div>
 
-              <Separator className="bg-gray-200 dark:bg-gray-700" />
+              <Separator />
 
               <div className="space-y-3">
                 <Button 
                   variant="outline" 
-                  className="w-full justify-start border-green-200 dark:border-gray-600 hover:bg-green-50 dark:hover:bg-gray-700"
+                  className="w-full justify-start hover:bg-primary/10"
                   onClick={() => navigate('/history')}
                 >
                   <History className="h-4 w-4 mr-2" />
@@ -198,7 +213,7 @@ const Settings = () => {
                 </Button>
                 <Button 
                   variant="outline" 
-                  className="w-full justify-start border-green-200 dark:border-gray-600 hover:bg-green-50 dark:hover:bg-gray-700"
+                  className="w-full justify-start hover:bg-primary/10"
                   onClick={handleExportData}
                 >
                   <Download className="h-4 w-4 mr-2" />
@@ -206,7 +221,7 @@ const Settings = () => {
                 </Button>
                 <Button 
                   variant="outline" 
-                  className="w-full justify-start text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 border-red-200 dark:border-red-800"
+                  className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10"
                   onClick={handleClearHistory}
                   disabled={history.length === 0}
                 >
@@ -218,9 +233,9 @@ const Settings = () => {
           </Card>
 
           {/* Advanced Settings */}
-          <Card className="border-green-200 dark:border-gray-700">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-orange-700 dark:text-orange-400">
+          <Card className="border-warning/20 shadow-lg">
+            <CardHeader className="pb-4">
+              <CardTitle className="flex items-center gap-2 text-warning">
                 <SettingsIcon className="h-5 w-5" />
                 Advanced
               </CardTitle>
@@ -228,37 +243,37 @@ const Settings = () => {
             <CardContent className="space-y-6">
               <div className="space-y-3 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-gray-600 dark:text-gray-400">Version:</span>
-                  <span className="font-medium text-gray-900 dark:text-gray-100">2.1.0</span>
+                  <span className="text-muted-foreground">Version:</span>
+                  <span className="font-medium">2.1.0</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600 dark:text-gray-400">Transcription Model:</span>
-                  <span className="font-medium text-gray-900 dark:text-gray-100">Gemini 2.5 Flash Preview</span>
+                  <span className="text-muted-foreground">Transcription Model:</span>
+                  <span className="font-medium">Gemini 2.5 Flash Preview</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600 dark:text-gray-400">Analysis Model:</span>
-                  <span className="font-medium text-gray-900 dark:text-gray-100">Gemini 2.0 Flash-Lite</span>
+                  <span className="text-muted-foreground">Analysis Model:</span>
+                  <span className="font-medium">Gemini 2.0 Flash-Lite</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600 dark:text-gray-400">Last Updated:</span>
-                  <span className="font-medium text-gray-900 dark:text-gray-100">Today</span>
+                  <span className="text-muted-foreground">Last Updated:</span>
+                  <span className="font-medium">Today</span>
                 </div>
               </div>
 
-              <Separator className="bg-gray-200 dark:bg-gray-700" />
+              <Separator />
 
               <div className="space-y-2">
-                <p className="text-sm text-gray-600 dark:text-gray-400">
+                <p className="text-sm text-muted-foreground">
                   AI-powered transcription with advanced language support, speaker identification, and real-time processing.
                 </p>
               </div>
 
               <div className="grid grid-cols-2 gap-2">
-                <Button variant="outline" size="sm" className="text-xs border-green-200 dark:border-gray-600">
+                <Button variant="outline" size="sm" className="text-xs">
                   <FileText className="h-3 w-3 mr-1" />
                   Release Notes
                 </Button>
-                <Button variant="outline" size="sm" className="text-xs border-green-200 dark:border-gray-600">
+                <Button variant="outline" size="sm" className="text-xs">
                   <Globe className="h-3 w-3 mr-1" />
                   Support
                 </Button>

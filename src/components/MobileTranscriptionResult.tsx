@@ -38,15 +38,15 @@ const MobileTranscriptionResult: React.FC<MobileTranscriptionResultProps> = ({
   };
 
   return (
-    <Card className="h-96 sm:h-[500px] border-green-200 dark:border-gray-700 shadow-lg">
+    <Card className="h-96 sm:h-[500px] border-primary/20 shadow-lg">
       <Tabs defaultValue="segments" className="h-full flex flex-col">
-        <TabsList className="grid w-full grid-cols-3 bg-green-50 dark:bg-gray-800">
+        <TabsList className="grid w-full grid-cols-3 bg-primary/5">
           <TabsTrigger value="segments" className="flex items-center gap-1 text-xs sm:text-sm">
             <Grid3X3 className="h-3 w-3 sm:h-4 sm:w-4" />
             <span className="hidden sm:inline">Segments</span>
             <span className="sm:hidden">Seg</span>
             {transcriptionLines.length > 0 && (
-              <span className="ml-1 bg-green-600 text-white text-xs px-1.5 py-0.5 rounded-full">
+              <span className="ml-1 bg-primary text-primary-foreground text-xs px-1.5 py-0.5 rounded-full">
                 {transcriptionLines.length}
               </span>
             )}
@@ -79,22 +79,22 @@ const MobileTranscriptionResult: React.FC<MobileTranscriptionResultProps> = ({
             {isTranscribing ? (
               <div className="flex justify-center items-center h-full">
                 <div className="text-center">
-                  <div className="w-8 h-8 mx-auto border-4 rounded-full border-l-green-600 border-r-green-300 border-b-green-600 border-t-green-300 animate-spin mb-2"></div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Processing...</p>
+                  <div className="w-8 h-8 mx-auto border-4 rounded-full border-l-primary border-r-primary/30 border-b-primary border-t-primary/30 animate-spin mb-2"></div>
+                  <p className="text-sm text-muted-foreground">Processing...</p>
                 </div>
               </div>
             ) : transcriptionLines.length === 0 ? (
               <div className="flex items-center justify-center h-full text-center">
-                <div className="text-gray-500 dark:text-gray-400">
+                <div className="text-muted-foreground">
                   <div className="text-2xl mb-2">📝</div>
                   <p className="text-sm">Easy view will show simplified transcription</p>
                 </div>
               </div>
             ) : (
               <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-green-700 dark:text-green-400">Easy View</h3>
+                <h3 className="text-lg font-semibold text-primary">Easy View</h3>
                 <div className="prose dark:prose-invert max-w-none">
-                  <p className="text-sm sm:text-base leading-relaxed text-gray-700 dark:text-gray-300">
+                  <p className="text-sm sm:text-base leading-relaxed text-foreground">
                     {transcriptionLines.map(line => line.text).join(' ')}
                   </p>
                 </div>
@@ -106,28 +106,28 @@ const MobileTranscriptionResult: React.FC<MobileTranscriptionResultProps> = ({
             {isTranscribing ? (
               <div className="flex justify-center items-center h-full">
                 <div className="text-center">
-                  <div className="w-8 h-8 mx-auto border-4 rounded-full border-l-green-600 border-r-green-300 border-b-green-600 border-t-green-300 animate-spin mb-2"></div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Analyzing actions...</p>
+                  <div className="w-8 h-8 mx-auto border-4 rounded-full border-l-primary border-r-primary/30 border-b-primary border-t-primary/30 animate-spin mb-2"></div>
+                  <p className="text-sm text-muted-foreground">Analyzing actions...</p>
                 </div>
               </div>
             ) : transcriptionLines.length === 0 ? (
               <div className="flex items-center justify-center h-full text-center">
-                <div className="text-gray-500 dark:text-gray-400">
+                <div className="text-muted-foreground">
                   <div className="text-2xl mb-2">⚡</div>
                   <p className="text-sm">Action items will appear here</p>
                 </div>
               </div>
             ) : (
               <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-green-700 dark:text-green-400">Action Items</h3>
+                <h3 className="text-lg font-semibold text-accent">Action Items</h3>
                 {getActions().length === 0 ? (
-                  <p className="text-sm text-gray-600 dark:text-gray-400">No specific actions identified in this transcription.</p>
+                  <p className="text-sm text-muted-foreground">No specific actions identified in this transcription.</p>
                 ) : (
                   <ul className="space-y-2">
                     {getActions().map((action, index) => (
                       <li key={index} className="flex items-start text-sm">
-                        <span className="text-green-600 dark:text-green-400 mr-2 mt-1">•</span>
-                        <span className="text-gray-700 dark:text-gray-300">{action}</span>
+                        <span className="text-accent mr-2 mt-1">•</span>
+                        <span className="text-foreground">{action}</span>
                       </li>
                     ))}
                   </ul>
@@ -136,7 +136,7 @@ const MobileTranscriptionResult: React.FC<MobileTranscriptionResultProps> = ({
             )}
           </TabsContent>
         </div>
-      </Tabs>
+      </tabs>
     </Card>
   );
 };
