@@ -1,5 +1,6 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,50 +8,51 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { UserPlus, LogIn, Mail, Lock, User, Loader2 } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 
 const AuthPage = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [loginForm, setLoginForm] = useState({ email: '', password: '' });
   const [signupForm, setSignupForm] = useState({ name: '', email: '', password: '', confirmPassword: '' });
-  const { toast } = useToast();
+  const navigate = useNavigate();
+  const { user, signIn, signUp } = useAuth();
+
+  useEffect(() => {
+    if (user) {
+      navigate('/transcribe');
+    }
+  }, [user, navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     
-    // Simulate API call
-    setTimeout(() => {
-      setIsLoading(false);
-      toast({
-        title: "Login successful",
-        description: "Welcome back!",
-      });
-    }, 2000);
+    const { error } = await signIn(loginForm.email, loginForm.password);
+    
+    if (!error) {
+      navigate('/transcribe');
+    }
+    
+    setIsLoading(false);
   };
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (signupForm.password !== signupForm.confirmPassword) {
-      toast({
-        title: "Password mismatch",
-        description: "Passwords do not match. Please try again.",
-        variant: "destructive",
-      });
       return;
     }
     
     setIsLoading(true);
     
-    // Simulate API call
-    setTimeout(() => {
-      setIsLoading(false);
-      toast({
-        title: "Account created",
-        description: "Your account has been created successfully!",
-      });
-    }, 2000);
+    const { error } = await signUp(signupForm.email, signupForm.password, signupForm.name);
+    
+    if (!error) {
+      // User will be redirected after email confirmation
+      setSignupForm({ name: '', email: '', password: '', confirmPassword: '' });
+    }
+    
+    setIsLoading(false);
   };
 
   return (
@@ -62,7 +64,7 @@ const AuthPage = () => {
               <User className="h-8 w-8 text-white" />
             </div>
             <CardTitle className="text-2xl bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-              Welcome
+              Welcome to AI Transcribe
             </CardTitle>
             <p className="text-muted-foreground">Sign in to your account or create a new one</p>
           </CardHeader>

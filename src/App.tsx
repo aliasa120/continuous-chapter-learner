@@ -6,7 +6,9 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { SettingsProvider } from "./contexts/SettingsContext";
+import { AuthProvider } from "./contexts/AuthContext";
 import Header from "./components/Header";
+import ProtectedRoute from "./components/ProtectedRoute";
 import Home from "./pages/Home";
 import TranscribePage from "./pages/TranscribePage";
 import AuthPage from "./pages/AuthPage";
@@ -22,30 +24,44 @@ const queryClient = new QueryClient();
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <ThemeProvider>
-      <SettingsProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-slate-950 dark:via-slate-900 dark:to-purple-950 transition-colors">
-              <Header />
-              <main className="min-h-screen">
-                <Routes>
-                  <Route path="/" element={<Home />} />
-                  <Route path="/transcribe" element={<TranscribePage />} />
-                  <Route path="/auth" element={<AuthPage />} />
-                  <Route path="/privacy" element={<Privacy />} />
-                  <Route path="/how-it-works" element={<HowItWorks />} />
-                  <Route path="/terms" element={<Terms />} />
-                  <Route path="/settings" element={<Settings />} />
-                  <Route path="/history" element={<History />} />
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-              </main>
-            </div>
-          </BrowserRouter>
-        </TooltipProvider>
-      </SettingsProvider>
+      <AuthProvider>
+        <SettingsProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+              <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-slate-950 dark:via-slate-900 dark:to-purple-950 transition-colors">
+                <Header />
+                <main className="min-h-screen">
+                  <Routes>
+                    <Route path="/" element={<Home />} />
+                    <Route path="/transcribe" element={
+                      <ProtectedRoute>
+                        <TranscribePage />
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/history" element={
+                      <ProtectedRoute>
+                        <History />
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/settings" element={
+                      <ProtectedRoute>
+                        <Settings />
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/auth" element={<AuthPage />} />
+                    <Route path="/privacy" element={<Privacy />} />
+                    <Route path="/how-it-works" element={<HowItWorks />} />
+                    <Route path="/terms" element={<Terms />} />
+                    <Route path="*" element={<NotFound />} />
+                  </Routes>
+                </main>
+              </div>
+            </BrowserRouter>
+          </TooltipProvider>
+        </SettingsProvider>
+      </AuthProvider>
     </ThemeProvider>
   </QueryClientProvider>
 );
