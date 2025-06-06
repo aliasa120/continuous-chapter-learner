@@ -136,7 +136,7 @@ const MobileTranscriptionResult: React.FC<MobileTranscriptionResultProps> = ({
             )}
           </TabsContent>
         </div>
-      </tabs>
+      </Tabs>
     </Card>
   );
 };
