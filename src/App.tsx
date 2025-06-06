@@ -24,12 +24,13 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
-          <div className="min-h-screen bg-gradient-to-br from-green-50 to-white dark:from-gray-900 dark:to-gray-800 transition-colors">
+          <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-white dark:from-gray-900 dark:to-gray-800 transition-colors">
             <Header />
             <main className="min-h-screen">
               <Routes>
                 <Route path="/" element={<Home />} />
                 <Route path="/transcribe" element={<TranscribePage />} />
+                <Route path="/auth" element={<AuthPage />} />
                 <Route path="/privacy" element={<Privacy />} />
                 <Route path="/how-it-works" element={<HowItWorks />} />
                 <Route path="/terms" element={<Terms />} />

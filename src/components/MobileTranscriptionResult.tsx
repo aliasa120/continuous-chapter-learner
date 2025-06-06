@@ -1,14 +1,9 @@
 
-import React, { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import React from 'react';
+import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Play, Pause, FileText, Lightbulb, BookOpen, Copy, Check, Zap, ChevronDown, ChevronUp } from 'lucide-react';
-import WordHighlight from './WordHighlight';
-import ExpandableAICard from './ExpandableAICard';
-import { useAIAnalysis } from '../hooks/useAIAnalysis';
-import { useToast } from '@/hooks/use-toast';
+import { Segments, Eye, Zap } from 'lucide-react';
+import TranscriptionResult from './TranscriptionResult';
 import type { TranscriptionLine } from '../utils/geminiTranscription';
 
 interface MobileTranscriptionResultProps {
@@ -28,273 +23,120 @@ const MobileTranscriptionResult: React.FC<MobileTranscriptionResultProps> = ({
   isPlaying,
   onPlayPause
 }) => {
-  const [activeTab, setActiveTab] = useState('segments');
-  const [copied, setCopied] = useState(false);
-  const [expandedSummary, setExpandedSummary] = useState(false);
-  const [expandedExplanation, setExpandedExplanation] = useState(false);
-  const { generateAnalysis, isAnalyzing, analysis } = useAIAnalysis();
-  const { toast } = useToast();
-
-  const copyToClipboard = async (text: string) => {
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-      toast({
-        title: "Copied to clipboard",
-        description: "Text has been copied successfully.",
-      });
-    } catch (error) {
-      toast({
-        title: "Copy failed",
-        description: "Unable to copy text to clipboard.",
-        variant: "destructive",
-      });
-    }
+  const getActions = () => {
+    const allActions: string[] = [];
+    transcriptionLines.forEach(line => {
+      // Extract action-oriented keywords from text
+      const text = line.text.toLowerCase();
+      if (text.includes('action') || text.includes('task') || text.includes('do') || 
+          text.includes('will') || text.includes('should') || text.includes('need to') ||
+          text.includes('must') || text.includes('plan') || text.includes('decide')) {
+        allActions.push(line.text);
+      }
+    });
+    return allActions.slice(0, 5); // Show top 5 actions
   };
-
-  const handleGenerateAnalysis = async () => {
-    if (transcriptionLines.length === 0) return;
-    
-    const fullText = transcriptionLines.map(line => line.text).join(' ');
-    try {
-      await generateAnalysis(fullText);
-      toast({
-        title: "AI Analysis Complete",
-        description: "Summary and explanation have been generated.",
-      });
-    } catch (error) {
-      toast({
-        title: "Analysis failed",
-        description: "Unable to generate AI analysis. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const isLineActive = (line: TranscriptionLine) => {
-    return currentTime >= line.startTime && currentTime <= line.endTime;
-  };
-
-  const getFullTranscript = () => {
-    return transcriptionLines.map(line => line.text).join(' ');
-  };
-
-  if (isTranscribing) {
-    return (
-      <Card className="h-96">
-        <CardContent className="flex items-center justify-center h-full p-4">
-          <div className="text-center">
-            <div className="w-10 h-10 mx-auto border-4 rounded-full border-l-green-600 border-r-green-300 border-b-green-600 border-t-green-300 animate-spin mb-3"></div>
-            <p className="text-gray-900 font-medium text-sm">AI Processing...</p>
-            <p className="text-xs text-gray-600 mt-1">Enhanced transcription in progress</p>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  if (transcriptionLines.length === 0) {
-    return (
-      <Card className="h-96">
-        <CardContent className="flex items-center justify-center h-full p-4 text-center">
-          <div className="text-gray-600">
-            <div className="text-3xl mb-3">🎯</div>
-            <p className="mb-2 text-sm font-medium">Results will appear here</p>
-            <p className="text-xs">Upload a file and start transcription</p>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
 
   return (
-    <Card className="h-96">
-      <CardContent className="p-0 h-full flex flex-col">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
-          <TabsList className="grid w-full grid-cols-3 rounded-none border-b">
-            <TabsTrigger value="segments" className="text-xs">
-              <FileText className="h-3 w-3 mr-1" />
-              Segments
-            </TabsTrigger>
-            <TabsTrigger value="easy" className="text-xs">
-              <BookOpen className="h-3 w-3 mr-1" />
-              Easy View
-            </TabsTrigger>
-            <TabsTrigger value="actions" className="text-xs">
-              <Zap className="h-3 w-3 mr-1" />
-              Actions
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="segments" className="flex-1 m-0">
-            <div className="flex items-center justify-between p-2 border-b bg-gray-50">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={onPlayPause}
-                className="h-7 px-2"
-              >
-                {isPlaying ? <Pause className="h-3 w-3" /> : <Play className="h-3 w-3" />}
-              </Button>
-              <span className="text-xs text-gray-600">{transcriptionLines.length} segments</span>
-            </div>
-            
-            <ScrollArea className="flex-1">
-              <div className="p-2 space-y-2">
-                {transcriptionLines.map((line, index) => {
-                  const isActive = isLineActive(line);
-                  
-                  return (
-                    <Card 
-                      key={index}
-                      className={`cursor-pointer transition-all duration-200 ${
-                        isActive 
-                          ? 'border-green-500 shadow-md bg-green-50 ring-1 ring-green-200' 
-                          : 'border-gray-200 hover:border-green-300 hover:shadow-sm'
-                      }`}
-                      onClick={() => seekToTimestamp(line.startTime)}
-                    >
-                      <CardContent className="p-3">
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-xs font-mono text-green-700 bg-green-100 px-2 py-1 rounded">
-                              {line.timestamp}
-                            </span>
-                            {line.speaker && (
-                              <span className="text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded">
-                                {line.speaker}
-                              </span>
-                            )}
-                            {line.confidence && (
-                              <span className="text-xs text-gray-600 bg-gray-100 px-2 py-1 rounded">
-                                {line.confidence}%
-                              </span>
-                            )}
-                          </div>
-                          <div className="flex gap-1">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-6 w-6 p-0"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                copyToClipboard(line.text);
-                              }}
-                            >
-                              <Copy className="h-3 w-3" />
-                            </Button>
-                            <ExpandableAICard text={line.text} variant="summary" />
-                            <ExpandableAICard text={line.text} variant="explanation" />
-                          </div>
-                        </div>
-                        
-                        <div className="text-sm">
-                          <WordHighlight
-                            text={line.text}
-                            currentTime={currentTime}
-                            startTime={line.startTime}
-                            endTime={line.endTime}
-                          />
-                        </div>
-                        
-                        {isActive && (
-                          <div className="mt-2 bg-green-200 rounded-full h-1 overflow-hidden">
-                            <div 
-                              className="bg-green-500 h-full transition-all duration-300"
-                              style={{
-                                width: `${Math.min(100, ((currentTime - line.startTime) / (line.endTime - line.startTime)) * 100)}%`
-                              }}
-                            />
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-              </div>
-            </ScrollArea>
+    <Card className="h-96 sm:h-[500px] border-green-200 dark:border-gray-700 shadow-lg">
+      <Tabs defaultValue="segments" className="h-full flex flex-col">
+        <TabsList className="grid w-full grid-cols-3 bg-green-50 dark:bg-gray-800">
+          <TabsTrigger value="segments" className="flex items-center gap-1 text-xs sm:text-sm">
+            <Segments className="h-3 w-3 sm:h-4 sm:w-4" />
+            <span className="hidden sm:inline">Segments</span>
+            <span className="sm:hidden">Seg</span>
+            {transcriptionLines.length > 0 && (
+              <span className="ml-1 bg-green-600 text-white text-xs px-1.5 py-0.5 rounded-full">
+                {transcriptionLines.length}
+              </span>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="easy-view" className="flex items-center gap-1 text-xs sm:text-sm">
+            <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
+            <span className="hidden sm:inline">Easy View</span>
+            <span className="sm:hidden">Easy</span>
+          </TabsTrigger>
+          <TabsTrigger value="actions" className="flex items-center gap-1 text-xs sm:text-sm">
+            <Zap className="h-3 w-3 sm:h-4 sm:w-4" />
+            <span className="hidden sm:inline">Actions</span>
+            <span className="sm:hidden">Act</span>
+          </TabsTrigger>
+        </TabsList>
+        
+        <div className="flex-1 overflow-hidden">
+          <TabsContent value="segments" className="h-full m-0">
+            <TranscriptionResult
+              transcriptionLines={transcriptionLines}
+              isTranscribing={isTranscribing}
+              currentTime={currentTime}
+              seekToTimestamp={seekToTimestamp}
+              isPlaying={isPlaying}
+              onPlayPause={onPlayPause}
+            />
           </TabsContent>
-
-          <TabsContent value="easy" className="flex-1 m-0">
-            <div className="flex items-center justify-between p-2 border-b bg-gray-50">
-              <span className="text-sm font-medium">Full Transcript</span>
-              <div className="flex gap-1">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => copyToClipboard(getFullTranscript())}
-                  className="h-7 px-2"
-                >
-                  {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
-                </Button>
-                <ExpandableAICard text={getFullTranscript()} variant="summary" />
-                <ExpandableAICard text={getFullTranscript()} variant="explanation" />
+          
+          <TabsContent value="easy-view" className="h-full m-0 p-4 overflow-y-auto">
+            {isTranscribing ? (
+              <div className="flex justify-center items-center h-full">
+                <div className="text-center">
+                  <div className="w-8 h-8 mx-auto border-4 rounded-full border-l-green-600 border-r-green-300 border-b-green-600 border-t-green-300 animate-spin mb-2"></div>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Processing...</p>
+                </div>
               </div>
-            </div>
-            
-            <ScrollArea className="flex-1">
-              <div className="p-3">
-                <WordHighlight
-                  text={getFullTranscript()}
-                  currentTime={currentTime}
-                  startTime={transcriptionLines[0]?.startTime || 0}
-                  endTime={transcriptionLines[transcriptionLines.length - 1]?.endTime || 0}
-                />
+            ) : transcriptionLines.length === 0 ? (
+              <div className="flex items-center justify-center h-full text-center">
+                <div className="text-gray-500 dark:text-gray-400">
+                  <div className="text-2xl mb-2">📝</div>
+                  <p className="text-sm">Easy view will show simplified transcription</p>
+                </div>
               </div>
-            </ScrollArea>
+            ) : (
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-green-700 dark:text-green-400">Easy View</h3>
+                <div className="prose dark:prose-invert max-w-none">
+                  <p className="text-sm sm:text-base leading-relaxed text-gray-700 dark:text-gray-300">
+                    {transcriptionLines.map(line => line.text).join(' ')}
+                  </p>
+                </div>
+              </div>
+            )}
           </TabsContent>
-
-          <TabsContent value="actions" className="flex-1 m-0">
-            <div className="flex items-center justify-between p-2 border-b bg-gray-50">
-              <span className="text-sm font-medium">Action Items</span>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleGenerateAnalysis}
-                disabled={isAnalyzing || transcriptionLines.length === 0}
-                className="h-7 px-2"
-              >
-                {isAnalyzing ? (
-                  <div className="w-3 h-3 border-2 border-t-transparent border-gray-600 rounded-full animate-spin" />
+          
+          <TabsContent value="actions" className="h-full m-0 p-4 overflow-y-auto">
+            {isTranscribing ? (
+              <div className="flex justify-center items-center h-full">
+                <div className="text-center">
+                  <div className="w-8 h-8 mx-auto border-4 rounded-full border-l-green-600 border-r-green-300 border-b-green-600 border-t-green-300 animate-spin mb-2"></div>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Analyzing actions...</p>
+                </div>
+              </div>
+            ) : transcriptionLines.length === 0 ? (
+              <div className="flex items-center justify-center h-full text-center">
+                <div className="text-gray-500 dark:text-gray-400">
+                  <div className="text-2xl mb-2">⚡</div>
+                  <p className="text-sm">Action items will appear here</p>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-green-700 dark:text-green-400">Action Items</h3>
+                {getActions().length === 0 ? (
+                  <p className="text-sm text-gray-600 dark:text-gray-400">No specific actions identified in this transcription.</p>
                 ) : (
-                  <Zap className="h-3 w-3" />
-                )}
-              </Button>
-            </div>
-            
-            <ScrollArea className="flex-1">
-              <div className="p-3 space-y-4">
-                {analysis ? (
-                  <div className="space-y-3">
-                    {analysis.actions && analysis.actions.length > 0 && (
-                      <div>
-                        <h4 className="text-sm font-semibold text-blue-700 mb-2 flex items-center">
-                          <Zap className="h-3 w-3 mr-1" />
-                          Action Items
-                        </h4>
-                        <ul className="space-y-1">
-                          {analysis.actions.map((action, index) => (
-                            <li key={index} className="text-sm text-gray-700 flex items-start">
-                              <span className="text-green-600 mr-2">•</span>
-                              <span>{action}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <div className="text-center text-gray-500">
-                    <Zap className="h-8 w-8 mx-auto mb-2 text-gray-400" />
-                    <p className="text-sm">Generate analysis to see action items</p>
-                  </div>
+                  <ul className="space-y-2">
+                    {getActions().map((action, index) => (
+                      <li key={index} className="flex items-start text-sm">
+                        <span className="text-green-600 dark:text-green-400 mr-2 mt-1">•</span>
+                        <span className="text-gray-700 dark:text-gray-300">{action}</span>
+                      </li>
+                    ))}
+                  </ul>
                 )}
               </div>
-            </ScrollArea>
+            )}
           </TabsContent>
-        </Tabs>
-      </CardContent>
+        </div>
+      </Tabs>
     </Card>
   );
 };
