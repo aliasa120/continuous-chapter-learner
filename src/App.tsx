@@ -11,6 +11,7 @@ import Header from "./components/Header";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Home from "./pages/Home";
 import TranscribePage from "./pages/TranscribePage";
+import PlayerPage from "./pages/PlayerPage";
 import AuthPage from "./pages/AuthPage";
 import Privacy from "./pages/Privacy";
 import HowItWorks from "./pages/HowItWorks";
@@ -31,32 +32,42 @@ const App = () => (
             <Sonner />
             <BrowserRouter>
               <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-slate-950 dark:via-slate-900 dark:to-purple-950 transition-colors">
-                <Header />
-                <main className="min-h-screen">
-                  <Routes>
-                    <Route path="/" element={<Home />} />
-                    <Route path="/transcribe" element={
-                      <ProtectedRoute>
-                        <TranscribePage />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="/history" element={
-                      <ProtectedRoute>
-                        <History />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="/settings" element={
-                      <ProtectedRoute>
-                        <Settings />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="/auth" element={<AuthPage />} />
-                    <Route path="/privacy" element={<Privacy />} />
-                    <Route path="/how-it-works" element={<HowItWorks />} />
-                    <Route path="/terms" element={<Terms />} />
-                    <Route path="*" element={<NotFound />} />
-                  </Routes>
-                </main>
+                <Routes>
+                  {/* Player page without header for fullscreen experience */}
+                  <Route path="/player" element={<PlayerPage />} />
+                  
+                  {/* Regular pages with header */}
+                  <Route path="/*" element={
+                    <>
+                      <Header />
+                      <main className="min-h-screen">
+                        <Routes>
+                          <Route path="/" element={<Home />} />
+                          <Route path="/transcribe" element={
+                            <ProtectedRoute>
+                              <TranscribePage />
+                            </ProtectedRoute>
+                          } />
+                          <Route path="/history" element={
+                            <ProtectedRoute>
+                              <History />
+                            </ProtectedRoute>
+                          } />
+                          <Route path="/settings" element={
+                            <ProtectedRoute>
+                              <Settings />
+                            </ProtectedRoute>
+                          } />
+                          <Route path="/auth" element={<AuthPage />} />
+                          <Route path="/privacy" element={<Privacy />} />
+                          <Route path="/how-it-works" element={<HowItWorks />} />
+                          <Route path="/terms" element={<Terms />} />
+                          <Route path="*" element={<NotFound />} />
+                        </Routes>
+                      </main>
+                    </>
+                  } />
+                </Routes>
               </div>
             </BrowserRouter>
           </TooltipProvider>

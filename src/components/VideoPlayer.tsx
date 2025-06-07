@@ -3,7 +3,8 @@ import React, { useRef, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { Play, Pause, RotateCcw, Volume2 } from 'lucide-react';
+import { Play, Pause, RotateCcw, Volume2, ExternalLink } from 'lucide-react';
+import type { TranscriptionLine } from '../utils/geminiTranscription';
 
 interface VideoPlayerProps {
   file: File | null;
@@ -17,6 +18,7 @@ interface VideoPlayerProps {
   onPlayPause: () => void;
   onRestart: () => void;
   seekToTimestamp: (seconds: number) => void;
+  transcriptionLines?: TranscriptionLine[];
 }
 
 const VideoPlayer: React.FC<VideoPlayerProps> = ({
@@ -30,7 +32,8 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   onEnded,
   onPlayPause,
   onRestart,
-  seekToTimestamp
+  seekToTimestamp,
+  transcriptionLines = []
 }) => {
   const mediaRef = useRef<HTMLVideoElement | HTMLAudioElement>(null);
   const isVideo = file?.type.startsWith('video/');
@@ -81,6 +84,19 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     seekToTimestamp(newTime);
   };
 
+  const openInNewTab = () => {
+    if (!audioUrl || transcriptionLines.length === 0) return;
+    
+    const params = new URLSearchParams({
+      audioUrl,
+      isVideo: isVideo ? 'true' : 'false',
+      transcription: encodeURIComponent(JSON.stringify(transcriptionLines))
+    });
+    
+    const url = `/player?${params.toString()}`;
+    window.open(url, '_blank');
+  };
+
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
@@ -92,9 +108,22 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   return (
     <Card className="border-primary/20 shadow-lg bg-card backdrop-blur">
       <CardHeader className="pb-4">
-        <CardTitle className="flex items-center gap-2 text-primary">
-          {isVideo ? '🎬' : '🎵'} {isVideo ? 'Video' : 'Audio'} Player
-        </CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="flex items-center gap-2 text-primary">
+            {isVideo ? '🎬' : '🎵'} {isVideo ? 'Video' : 'Audio'} Player
+          </CardTitle>
+          {transcriptionLines.length > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={openInNewTab}
+              className="border-primary text-primary hover:bg-primary/10"
+              title="Open in separate tab with subtitles"
+            >
+              <ExternalLink className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
       </CardHeader>
       <CardContent className="space-y-4">
         {isVideo ? (

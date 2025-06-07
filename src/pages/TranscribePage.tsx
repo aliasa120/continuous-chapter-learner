@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -269,6 +268,7 @@ const TranscribePage = () => {
               )}
             </Button>
 
+            {/* Progress indicator */}
             {isTranscribing && (
               <div className="space-y-2">
                 <Progress value={progress} className="h-2" />
@@ -292,9 +292,11 @@ const TranscribePage = () => {
                 onPlayPause={handlePlayPause}
                 onRestart={handleRestart}
                 seekToTimestamp={seekToTimestamp}
+                transcriptionLines={transcriptionLines}
               />
             )}
 
+            {/* Authentication notice */}
             {!user && (
               <Card className="border-amber-200 bg-amber-50/50 dark:border-amber-800 dark:bg-amber-900/20">
                 <CardContent className="p-4">
