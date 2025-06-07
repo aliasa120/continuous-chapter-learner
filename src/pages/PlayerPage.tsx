@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
@@ -313,7 +314,7 @@ const PlayerPage = () => {
     );
   }
 
-  // Desktop layout (unchanged)
+  // Desktop layout
   return (
     <div className="min-h-screen bg-black text-white flex flex-col">
       <div className="flex-1 flex items-center justify-center p-4">
@@ -338,8 +339,8 @@ const PlayerPage = () => {
                     endTime={currentLine.endTime}
                   />
                 </div>
-              )}
-            </div>
+              </div>
+            )}
           </div>
         ) : (
           <div className="w-full max-w-4xl text-center">
