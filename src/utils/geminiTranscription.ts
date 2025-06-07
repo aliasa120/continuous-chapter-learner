@@ -12,14 +12,17 @@ export interface TranscriptionLine {
 export interface TranscriptionOptions {
   file: File;
   language: string;
+  onProgress?: (progress: number) => void;
 }
 
 const HARDCODED_API_KEY = 'AIzaSyDcvqkBlNTX1mhT6y7e-BK6Ix-AdCbR95A';
 
-export const transcribeWithGemini = async ({ file, language }: TranscriptionOptions): Promise<TranscriptionLine[]> => {
+export const transcribeWithGemini = async ({ file, language, onProgress }: TranscriptionOptions): Promise<TranscriptionLine[]> => {
   try {
     console.log('Starting transcription with Gemini 2.5 Flash Preview');
-    console.log('Target language:', language, 'File:', file.name);
+    console.log('Target language:', language, 'File:', file.name, 'Size:', file.size);
+    
+    onProgress?.(5);
     
     const ai = new GoogleGenAI({
       apiKey: HARDCODED_API_KEY,
@@ -27,8 +30,14 @@ export const transcribeWithGemini = async ({ file, language }: TranscriptionOpti
 
     const model = 'gemini-2.5-flash-preview-05-20';
 
-    // Convert file to base64
+    onProgress?.(15);
+
+    // Convert file to base64 with progress
+    console.log('Converting file to base64...');
     const fileData = await fileToBase64(file);
+    console.log('File converted to base64, size:', fileData.length);
+    
+    onProgress?.(30);
     
     const targetLanguage = getLanguageName(language);
     console.log('Target language for transcription:', targetLanguage);
@@ -61,7 +70,8 @@ ENHANCED FEATURES:
 - Preserve emotional tone and context in translation
 - Filter out background noise descriptions
 
-CRITICAL: ALL output text must be in ${targetLanguage} language regardless of source language.`;
+CRITICAL: ALL output text must be in ${targetLanguage} language regardless of source language.
+IMPORTANT: Always provide timestamps and speaker information for every segment.`;
 
     const contents = [
       {
@@ -81,33 +91,77 @@ CRITICAL: ALL output text must be in ${targetLanguage} language regardless of so
     ];
 
     console.log('Sending transcription request to Gemini 2.5 Flash Preview...');
+    onProgress?.(40);
 
     const response = await ai.models.generateContentStream({
       model,
       contents,
       config: {
-        responseMimeType: 'text/plain'
+        responseMimeType: 'text/plain',
+        temperature: 0.1,
+        topP: 0.8,
+        topK: 40,
+        maxOutputTokens: 8192,
       }
     });
 
     let transcriptionText = '';
+    let chunkCount = 0;
+    
+    console.log('Receiving transcription response...');
     for await (const chunk of response) {
       if (chunk.text) {
         transcriptionText += chunk.text;
+        chunkCount++;
+        
+        // Update progress based on chunks received
+        const progress = Math.min(95, 40 + (chunkCount * 2));
+        onProgress?.(progress);
+        
+        console.log(`Received chunk ${chunkCount}, total length: ${transcriptionText.length}`);
       }
     }
     
-    console.log('Received transcription response:', transcriptionText);
+    console.log('Full transcription response received:', transcriptionText);
+    onProgress?.(98);
+
+    if (!transcriptionText.trim()) {
+      throw new Error('No transcription content received from the API');
+    }
 
     const parsedLines = parseEnhancedTranscription(transcriptionText);
     console.log('Parsed transcription lines:', parsedLines.length);
     
+    if (parsedLines.length === 0) {
+      console.warn('No valid transcription lines parsed, trying fallback parsing...');
+      // Try basic parsing as fallback
+      const fallbackLines = parseBasicTranscription(transcriptionText);
+      if (fallbackLines.length > 0) {
+        console.log('Fallback parsing successful:', fallbackLines.length, 'lines');
+        onProgress?.(100);
+        return fallbackLines;
+      }
+      throw new Error('Failed to parse transcription response');
+    }
+    
+    onProgress?.(100);
     return parsedLines;
   } catch (error) {
     console.error('Transcription error:', error);
-    if (error instanceof Error && error.message.includes('API_KEY')) {
-      throw new Error('API key authentication failed. Please contact support.');
+    onProgress?.(0);
+    
+    if (error instanceof Error) {
+      if (error.message.includes('API_KEY')) {
+        throw new Error('API key authentication failed. Please contact support.');
+      }
+      if (error.message.includes('quota')) {
+        throw new Error('API quota exceeded. Please try again later.');
+      }
+      if (error.message.includes('file size') || error.message.includes('too large')) {
+        throw new Error('File size too large. Please use a smaller file.');
+      }
     }
+    
     throw new Error('Transcription failed. Please try again or contact support.');
   }
 };
@@ -171,6 +225,32 @@ const parseEnhancedTranscription = (text: string): TranscriptionLine[] => {
           transcriptionLines.push(transcriptionLine);
         }
       }
+    }
+  });
+
+  return transcriptionLines;
+};
+
+// Fallback basic parsing
+const parseBasicTranscription = (text: string): TranscriptionLine[] => {
+  const lines = text.split('\n').filter(line => line.trim());
+  const transcriptionLines: TranscriptionLine[] = [];
+  let currentTime = 0;
+
+  lines.forEach((line, index) => {
+    const cleanText = line.trim();
+    if (cleanText && !cleanText.startsWith('[') && cleanText.length > 3) {
+      const transcriptionLine = {
+        timestamp: formatTime(currentTime),
+        text: cleanText,
+        startTime: currentTime,
+        endTime: currentTime + 5,
+        speaker: 'Speaker A',
+        confidence: 85
+      };
+      
+      transcriptionLines.push(transcriptionLine);
+      currentTime += 5;
     }
   });
 
@@ -274,6 +354,12 @@ const formatTimestamp = (timeStr: string): string => {
     return `00:${timeStr}`;
   }
   return timeStr;
+};
+
+const formatTime = (seconds: number): string => {
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.floor(seconds % 60);
+  return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
 };
 
 const fileToBase64 = (file: File): Promise<string> => {

@@ -103,9 +103,14 @@ const TranscribePage = () => {
     try {
       const result = await transcribeWithGemini({
         file: file,
-        language: language
+        language: language,
+        onProgress: (progressValue) => {
+          console.log('Transcription progress:', progressValue);
+          setProgress(progressValue);
+        }
       });
       
+      console.log('Transcription completed, lines:', result.length);
       setTranscriptionLines(result);
       setProgress(100);
       
@@ -124,11 +129,12 @@ const TranscribePage = () => {
 
       toast({
         title: "Transcription completed",
-        description: `Successfully transcribed ${file.name}`,
+        description: `Successfully transcribed ${file.name} with ${result.length} segments`,
       });
 
     } catch (error) {
       console.error('Transcription error:', error);
+      setProgress(0);
       toast({
         title: "Transcription failed",
         description: error instanceof Error ? error.message : "An error occurred during transcription",

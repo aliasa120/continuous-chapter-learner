@@ -1,9 +1,10 @@
 
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { Play, Pause, RotateCcw, Volume2, ExternalLink } from 'lucide-react';
+import { Play, Pause, RotateCcw, Volume2, ExternalLink, Maximize } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import type { TranscriptionLine } from '../utils/geminiTranscription';
 
 interface VideoPlayerProps {
@@ -36,12 +37,25 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   transcriptionLines = []
 }) => {
   const mediaRef = useRef<HTMLVideoElement | HTMLAudioElement>(null);
+  const navigate = useNavigate();
   const isVideo = file?.type.startsWith('video/');
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent));
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   useEffect(() => {
     const media = mediaRef.current;
     if (media && audioUrl) {
       media.src = audioUrl;
+      console.log('Media source set:', audioUrl);
     }
   }, [audioUrl]);
 
@@ -50,7 +64,12 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     const media = mediaRef.current;
     if (media) {
       if (isPlaying) {
-        media.play().catch(console.error);
+        const playPromise = media.play();
+        if (playPromise) {
+          playPromise.catch(error => {
+            console.error('Play failed:', error);
+          });
+        }
       } else {
         media.pause();
       }
@@ -70,6 +89,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   };
 
   const handleLoadedMetadata = (e: React.SyntheticEvent<HTMLVideoElement | HTMLAudioElement>) => {
+    console.log('Media loaded, duration:', e.currentTarget.duration);
     onLoadedMetadata(e.currentTarget.duration);
   };
 
@@ -84,7 +104,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     seekToTimestamp(newTime);
   };
 
-  const openInNewTab = () => {
+  const openPlayer = () => {
     if (!audioUrl || transcriptionLines.length === 0) return;
     
     const params = new URLSearchParams({
@@ -94,7 +114,14 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     });
     
     const url = `/player?${params.toString()}`;
-    window.open(url, '_blank');
+    
+    if (isMobile) {
+      // On mobile, navigate to the same page but in fullscreen mode
+      navigate(url);
+    } else {
+      // On desktop, open in new tab
+      window.open(url, '_blank');
+    }
   };
 
   const formatTime = (seconds: number) => {
@@ -116,11 +143,11 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
             <Button
               variant="outline"
               size="sm"
-              onClick={openInNewTab}
+              onClick={openPlayer}
               className="border-primary text-primary hover:bg-primary/10"
-              title="Open in separate tab with subtitles"
+              title={isMobile ? "Open fullscreen player" : "Open in separate tab with subtitles"}
             >
-              <ExternalLink className="h-4 w-4" />
+              {isMobile ? <Maximize className="h-4 w-4" /> : <ExternalLink className="h-4 w-4" />}
             </Button>
           )}
         </div>
@@ -132,9 +159,11 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
             onTimeUpdate={handleTimeUpdate}
             onLoadedMetadata={handleLoadedMetadata}
             onEnded={onEnded}
+            onError={(e) => console.error('Video error:', e)}
             className="w-full rounded-lg bg-black"
             controls={false}
             style={{ maxHeight: '300px' }}
+            playsInline
           />
         ) : (
           <audio
@@ -142,7 +171,9 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
             onTimeUpdate={handleTimeUpdate}
             onLoadedMetadata={handleLoadedMetadata}
             onEnded={onEnded}
+            onError={(e) => console.error('Audio error:', e)}
             className="hidden"
+            preload="metadata"
           />
         )}
         
