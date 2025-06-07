@@ -1,3 +1,4 @@
+
 import { GoogleGenAI } from '@google/genai';
 
 export interface TranscriptionLine {
@@ -28,7 +29,7 @@ export const transcribeWithGemini = async ({ file, language, onProgress }: Trans
       apiKey: HARDCODED_API_KEY,
     });
 
-    const model = 'gemini-2.5-flash-preview';
+    const model = 'gemini-2.0-flash-lite';
     console.log('Using model:', model);
 
     onProgress?.(15);
@@ -50,14 +51,13 @@ TASK: Transcribe and translate the audio/video content with maximum accuracy.
 TARGET LANGUAGE: ${targetLanguage}
 
 CRITICAL REQUIREMENTS:
-1. TRANSCRIBE every word spoken in the audio/video content
+1. TRANSCRIBE every word spoken in the audio/video
 2. TRANSLATE all content to ${targetLanguage} language (even if some parts are already in ${targetLanguage})
 3. IDENTIFY different speakers with high accuracy (Speaker A, Speaker B, etc.)
 4. PROVIDE precise timestamps for perfect audio synchronization
 5. ESTIMATE confidence levels for each segment
 6. HANDLE overlapping speech and background noise intelligently
 7. MAINTAIN context and meaning during translation
-8. PROCESS both audio and video files identically - extract and transcribe audio content
 
 OUTPUT FORMAT (EXACTLY as shown):
 [00:00-00:05] Speaker A (95%): [Translated text in ${targetLanguage}]
@@ -71,12 +71,10 @@ ENHANCED FEATURES:
 - Handle multiple languages in source audio
 - Preserve emotional tone and context in translation
 - Filter out background noise descriptions
-- For video files: focus only on audio content, ignore visual elements
 
 CRITICAL: ALL output text must be in ${targetLanguage} language regardless of source language.
 IMPORTANT: Always provide timestamps and speaker information for every segment.
-IMPORTANT: If no speech is detected, respond with: "No speech detected in this audio/video file."
-IMPORTANT: Process video files by extracting and transcribing the audio track only.`;
+IMPORTANT: If no speech is detected, respond with: "No speech detected in this audio/video file."`;
 
     const contents = [
       {
@@ -95,7 +93,7 @@ IMPORTANT: Process video files by extracting and transcribing the audio track on
       },
     ];
 
-    console.log('Sending transcription request to Gemini 2.5 Flash Preview model...');
+    console.log('Sending transcription request to Gemini model...');
     onProgress?.(40);
 
     const response = await ai.models.generateContentStream({
@@ -113,7 +111,7 @@ IMPORTANT: Process video files by extracting and transcribing the audio track on
     let transcriptionText = '';
     let chunkCount = 0;
     
-    console.log('Receiving transcription response from Gemini 2.5 Flash Preview...');
+    console.log('Receiving transcription response...');
     for await (const chunk of response) {
       if (chunk.text) {
         transcriptionText += chunk.text;
@@ -127,12 +125,12 @@ IMPORTANT: Process video files by extracting and transcribing the audio track on
       }
     }
     
-    console.log('Full transcription response received from Gemini 2.5 Flash Preview. Total length:', transcriptionText.length);
+    console.log('Full transcription response received. Total length:', transcriptionText.length);
     console.log('Raw transcription text:', transcriptionText);
     onProgress?.(98);
 
     if (!transcriptionText.trim()) {
-      console.error('No transcription content received from Gemini 2.5 Flash Preview');
+      console.error('No transcription content received from the API');
       throw new Error('No transcription content received from the API. The file might be too large or contain no speech.');
     }
 
@@ -159,10 +157,10 @@ IMPORTANT: Process video files by extracting and transcribing the audio track on
     }
     
     onProgress?.(100);
-    console.log('Transcription completed successfully with Gemini 2.5 Flash Preview:', parsedLines.length, 'segments');
+    console.log('Transcription completed successfully with', parsedLines.length, 'segments');
     return parsedLines;
   } catch (error) {
-    console.error('Transcription error with Gemini 2.5 Flash Preview:', error);
+    console.error('Transcription error:', error);
     onProgress?.(0);
     
     if (error instanceof Error) {
@@ -180,7 +178,7 @@ IMPORTANT: Process video files by extracting and transcribing the audio track on
       }
     }
     
-    throw new Error('Transcription failed with Gemini 2.5 Flash Preview. Please check if your file contains clear audio and try again.');
+    throw new Error('Transcription failed. Please check if your file contains clear audio and try again.');
   }
 };
 
