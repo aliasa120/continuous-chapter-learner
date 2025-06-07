@@ -42,6 +42,26 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     }
   }, [audioUrl]);
 
+  // Sync play/pause state with media element
+  useEffect(() => {
+    const media = mediaRef.current;
+    if (media) {
+      if (isPlaying) {
+        media.play().catch(console.error);
+      } else {
+        media.pause();
+      }
+    }
+  }, [isPlaying]);
+
+  // Sync current time with media element
+  useEffect(() => {
+    const media = mediaRef.current;
+    if (media && Math.abs(media.currentTime - currentTime) > 0.5) {
+      media.currentTime = currentTime;
+    }
+  }, [currentTime]);
+
   const handleTimeUpdate = (e: React.SyntheticEvent<HTMLVideoElement | HTMLAudioElement>) => {
     onTimeUpdate(e.currentTarget.currentTime);
   };

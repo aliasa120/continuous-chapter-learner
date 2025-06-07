@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
@@ -26,9 +26,32 @@ const MobileTranscriptionResult: React.FC<MobileTranscriptionResultProps> = ({
   isPlaying,
   onPlayPause
 }) => {
+  const activeLineRef = useRef<HTMLDivElement>(null);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
+
   const isLineActive = (line: TranscriptionLine) => {
     return currentTime >= line.startTime && currentTime <= line.endTime;
   };
+
+  // Mobile-specific scroll behavior - scroll up to show current line at top
+  useEffect(() => {
+    if (activeLineRef.current && scrollAreaRef.current && isPlaying) {
+      const scrollContainer = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]');
+      if (scrollContainer) {
+        const activeElement = activeLineRef.current;
+        const containerRect = scrollContainer.getBoundingClientRect();
+        const elementRect = activeElement.getBoundingClientRect();
+        
+        // Calculate scroll position to show active line at the top with some padding
+        const scrollTop = elementRect.top - containerRect.top + scrollContainer.scrollTop - 20;
+        
+        scrollContainer.scrollTo({
+          top: scrollTop,
+          behavior: 'smooth'
+        });
+      }
+    }
+  }, [currentTime, isPlaying]);
 
   const getActionItems = () => {
     const actions: string[] = [];
@@ -62,28 +85,28 @@ const MobileTranscriptionResult: React.FC<MobileTranscriptionResultProps> = ({
   return (
     <Card className="h-96 sm:h-[500px] border-primary/20 shadow-lg bg-card backdrop-blur">
       <Tabs defaultValue="segments" className="h-full flex flex-col">
-        <TabsList className="grid w-full grid-cols-3 bg-muted/50 m-2">
-          <TabsTrigger value="segments" className="flex items-center gap-1 text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+        <TabsList className="grid w-full grid-cols-3 bg-muted/50 m-1 h-9">
+          <TabsTrigger value="segments" className="flex items-center gap-1 text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-2 py-1">
             <Grid3X3 className="h-3 w-3" />
             <span className="hidden sm:inline">Segments</span>
             <span className="sm:hidden">Seg</span>
             {transcriptionLines.length > 0 && (
-              <Badge variant="secondary" className="ml-1 text-xs px-1.5 py-0.5">
+              <Badge variant="secondary" className="ml-1 text-xs px-1 py-0">
                 {transcriptionLines.length}
               </Badge>
             )}
           </TabsTrigger>
-          <TabsTrigger value="easy-view" className="flex items-center gap-1 text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+          <TabsTrigger value="easy-view" className="flex items-center gap-1 text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-2 py-1">
             <Eye className="h-3 w-3" />
             <span className="hidden sm:inline">Easy View</span>
             <span className="sm:hidden">Easy</span>
           </TabsTrigger>
-          <TabsTrigger value="actions" className="flex items-center gap-1 text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+          <TabsTrigger value="actions" className="flex items-center gap-1 text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-2 py-1">
             <Zap className="h-3 w-3" />
             <span className="hidden sm:inline">Actions</span>
             <span className="sm:hidden">Act</span>
             {actionItems.length > 0 && (
-              <Badge variant="secondary" className="ml-1 text-xs px-1.5 py-0.5">
+              <Badge variant="secondary" className="ml-1 text-xs px-1 py-0">
                 {actionItems.length}
               </Badge>
             )}
@@ -94,34 +117,34 @@ const MobileTranscriptionResult: React.FC<MobileTranscriptionResultProps> = ({
           <TabsContent value="segments" className="h-full m-0">
             {isTranscribing ? (
               <div className="flex justify-center items-center h-full">
-                <div className="text-center p-4">
-                  <div className="w-12 h-12 mx-auto border-4 rounded-full border-l-primary border-r-primary/30 border-b-primary border-t-primary/30 animate-spin mb-4"></div>
+                <div className="text-center p-2">
+                  <div className="w-10 h-10 mx-auto border-4 rounded-full border-l-primary border-r-primary/30 border-b-primary border-t-primary/30 animate-spin mb-3"></div>
                   <p className="text-foreground animate-pulse text-sm font-semibold">Enhanced AI Processing...</p>
-                  <p className="text-xs text-muted-foreground mt-2">Speaker identification • Confidence scoring • Precise timing</p>
-                  <div className="mt-3 bg-primary/10 rounded-lg p-2">
+                  <p className="text-xs text-muted-foreground mt-1">Speaker identification • Confidence scoring • Precise timing</p>
+                  <div className="mt-2 bg-primary/10 rounded-lg p-2">
                     <p className="text-xs text-primary">🚀 Gemini 2.5 Flash Preview</p>
                   </div>
                 </div>
               </div>
             ) : transcriptionLines.length === 0 ? (
-              <div className="flex items-center justify-center h-full text-center p-4">
+              <div className="flex items-center justify-center h-full text-center p-3">
                 <div className="text-muted-foreground">
-                  <div className="text-3xl mb-3">🎯</div>
-                  <p className="mb-2 text-sm font-medium text-foreground">Enhanced transcription results will appear here</p>
+                  <div className="text-2xl mb-2">🎯</div>
+                  <p className="mb-1 text-sm font-medium text-foreground">Enhanced transcription results will appear here</p>
                   <p className="text-xs text-muted-foreground">Upload a file and start enhanced AI transcription</p>
-                  <div className="mt-3 text-xs text-primary bg-primary/10 rounded-lg p-2">
+                  <div className="mt-2 text-xs text-primary bg-primary/10 rounded-lg p-2">
                     Features: Speaker ID • Confidence • Sync • AI Analysis
                   </div>
                 </div>
               </div>
             ) : (
-              <ScrollArea className="h-full p-2">
-                <div className="space-y-2">
+              <ScrollArea className="h-full" ref={scrollAreaRef}>
+                <div className="space-y-1 p-1">
                   {transcriptionLines.map((line, index) => {
                     const isActive = isLineActive(line);
                     
                     return (
-                      <div key={index}>
+                      <div key={index} ref={isActive ? activeLineRef : null}>
                         <TimestampCard
                           line={line}
                           index={index}
@@ -139,44 +162,44 @@ const MobileTranscriptionResult: React.FC<MobileTranscriptionResultProps> = ({
           </TabsContent>
           
           <TabsContent value="easy-view" className="h-full m-0">
-            <ScrollArea className="h-full p-3">
+            <ScrollArea className="h-full p-2">
               {isTranscribing ? (
                 <div className="flex justify-center items-center h-full">
                   <div className="text-center">
-                    <div className="w-8 h-8 mx-auto border-4 rounded-full border-l-primary border-r-primary/30 border-b-primary border-t-primary/30 animate-spin mb-2"></div>
+                    <div className="w-6 h-6 mx-auto border-4 rounded-full border-l-primary border-r-primary/30 border-b-primary border-t-primary/30 animate-spin mb-1"></div>
                     <p className="text-sm text-muted-foreground">Processing...</p>
                   </div>
                 </div>
               ) : transcriptionLines.length === 0 ? (
                 <div className="flex items-center justify-center h-full text-center">
                   <div className="text-muted-foreground">
-                    <div className="text-2xl mb-2">📝</div>
+                    <div className="text-xl mb-1">📝</div>
                     <p className="text-sm">Easy view will show simplified transcription</p>
                   </div>
                 </div>
               ) : (
-                <div className="space-y-4">
+                <div className="space-y-3">
                   <div className="flex items-center gap-2">
                     <FileText className="h-4 w-4 text-primary" />
-                    <h3 className="text-base font-semibold text-foreground">Easy Reading View</h3>
+                    <h3 className="text-sm font-semibold text-foreground">Easy Reading View</h3>
                   </div>
                   
-                  <div className="bg-card/50 border border-border rounded-lg p-3">
-                    <h4 className="text-sm font-medium text-foreground mb-2">Summary</h4>
+                  <div className="bg-card/50 border border-border rounded-lg p-2">
+                    <h4 className="text-sm font-medium text-foreground mb-1">Summary</h4>
                     <div className="text-xs text-muted-foreground leading-relaxed whitespace-pre-line">
                       {summary}
                     </div>
                   </div>
                   
-                  <div className="bg-card/50 border border-border rounded-lg p-3">
-                    <h4 className="text-sm font-medium text-foreground mb-2">Full Transcript</h4>
+                  <div className="bg-card/50 border border-border rounded-lg p-2">
+                    <h4 className="text-sm font-medium text-foreground mb-1">Full Transcript</h4>
                     <div className="prose dark:prose-invert max-w-none">
                       {transcriptionLines.map((line, index) => {
                         const isActive = isLineActive(line);
                         return (
                           <div 
                             key={index} 
-                            className={`mb-2 p-2 rounded transition-all duration-300 ${
+                            className={`mb-1 p-1 rounded transition-all duration-300 ${
                               isActive ? 'bg-primary/10 border-l-2 border-primary' : ''
                             }`}
                           >
@@ -197,53 +220,53 @@ const MobileTranscriptionResult: React.FC<MobileTranscriptionResultProps> = ({
           </TabsContent>
           
           <TabsContent value="actions" className="h-full m-0">
-            <ScrollArea className="h-full p-3">
+            <ScrollArea className="h-full p-2">
               {isTranscribing ? (
                 <div className="flex justify-center items-center h-full">
                   <div className="text-center">
-                    <div className="w-8 h-8 mx-auto border-4 rounded-full border-l-primary border-r-primary/30 border-b-primary border-t-primary/30 animate-spin mb-2"></div>
+                    <div className="w-6 h-6 mx-auto border-4 rounded-full border-l-primary border-r-primary/30 border-b-primary border-t-primary/30 animate-spin mb-1"></div>
                     <p className="text-sm text-muted-foreground">Analyzing actions...</p>
                   </div>
                 </div>
               ) : transcriptionLines.length === 0 ? (
                 <div className="flex items-center justify-center h-full text-center">
                   <div className="text-muted-foreground">
-                    <div className="text-2xl mb-2">⚡</div>
+                    <div className="text-xl mb-1">⚡</div>
                     <p className="text-sm">Action items will appear here</p>
                   </div>
                 </div>
               ) : (
-                <div className="space-y-4">
+                <div className="space-y-2">
                   <div className="flex items-center gap-2">
                     <Zap className="h-4 w-4 text-accent" />
-                    <h3 className="text-base font-semibold text-foreground">Action Items & Key Points</h3>
+                    <h3 className="text-sm font-semibold text-foreground">Action Items & Key Points</h3>
                   </div>
                   
                   {actionItems.length === 0 ? (
-                    <div className="text-center py-6">
-                      <div className="text-3xl mb-3">🔍</div>
+                    <div className="text-center py-4">
+                      <div className="text-2xl mb-2">🔍</div>
                       <p className="text-sm text-muted-foreground">No specific action items detected in this transcription.</p>
                       <p className="text-xs text-muted-foreground mt-1">Action detection looks for words like "task", "action", "need to", "should", etc.</p>
                     </div>
                   ) : (
-                    <div className="space-y-3">
-                      <div className="bg-accent/10 border border-accent/20 rounded-lg p-3">
-                        <h4 className="text-sm font-medium text-accent mb-2">
+                    <div className="space-y-2">
+                      <div className="bg-accent/10 border border-accent/20 rounded-lg p-2">
+                        <h4 className="text-sm font-medium text-accent mb-1">
                           Detected Actions ({actionItems.length})
                         </h4>
-                        <ul className="space-y-2">
+                        <ul className="space-y-1">
                           {actionItems.map((action, index) => (
                             <li key={index} className="flex items-start text-xs">
-                              <span className="text-accent mr-2 mt-0.5 font-bold">•</span>
+                              <span className="text-accent mr-1 mt-0.5 font-bold">•</span>
                               <span className="text-foreground leading-relaxed">{action}</span>
                             </li>
                           ))}
                         </ul>
                       </div>
                       
-                      <div className="bg-primary/10 border border-primary/20 rounded-lg p-3">
-                        <h4 className="text-sm font-medium text-primary mb-2">Quick Stats</h4>
-                        <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div className="bg-primary/10 border border-primary/20 rounded-lg p-2">
+                        <h4 className="text-sm font-medium text-primary mb-1">Quick Stats</h4>
+                        <div className="grid grid-cols-2 gap-1 text-xs">
                           <div>
                             <span className="text-muted-foreground">Segments:</span>
                             <span className="text-foreground font-medium ml-1">{transcriptionLines.length}</span>

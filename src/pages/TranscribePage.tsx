@@ -237,23 +237,6 @@ const TranscribePage = () => {
               </CardContent>
             </Card>
 
-            {/* Player moved above language selection */}
-            {audioUrl && (
-              <VideoPlayer
-                file={file}
-                audioUrl={audioUrl}
-                currentTime={currentTime}
-                duration={duration}
-                isPlaying={isPlaying}
-                onTimeUpdate={setCurrentTime}
-                onLoadedMetadata={setDuration}
-                onEnded={() => setIsPlaying(false)}
-                onPlayPause={handlePlayPause}
-                onRestart={handleRestart}
-                seekToTimestamp={seekToTimestamp}
-              />
-            )}
-
             <Card className="border-secondary/20 shadow-lg bg-card backdrop-blur">
               <CardHeader className="pb-3 sm:pb-4">
                 <CardTitle className="text-secondary text-base sm:text-lg">Configuration</CardTitle>
@@ -293,6 +276,23 @@ const TranscribePage = () => {
                   Processing your file... This may take a few moments.
                 </p>
               </div>
+            )}
+
+            {/* Player moved below transcribe button */}
+            {audioUrl && (
+              <VideoPlayer
+                file={file}
+                audioUrl={audioUrl}
+                currentTime={currentTime}
+                duration={duration}
+                isPlaying={isPlaying}
+                onTimeUpdate={setCurrentTime}
+                onLoadedMetadata={setDuration}
+                onEnded={() => setIsPlaying(false)}
+                onPlayPause={handlePlayPause}
+                onRestart={handleRestart}
+                seekToTimestamp={seekToTimestamp}
+              />
             )}
 
             {!user && (

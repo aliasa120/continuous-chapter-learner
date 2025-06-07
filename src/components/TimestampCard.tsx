@@ -5,6 +5,7 @@ import { Play, Pause, User, Award, Clock, BookOpen, Lightbulb, Loader2 } from 'l
 import { useSettings } from '../contexts/SettingsContext';
 import { useAIAnalysis } from '../hooks/useAIAnalysis';
 import { useToast } from '@/hooks/use-toast';
+import WordHighlight from './WordHighlight';
 import type { TranscriptionLine } from '../utils/geminiTranscription';
 
 interface TimestampCardProps {
@@ -149,12 +150,15 @@ const TimestampCard: React.FC<TimestampCardProps> = ({
           </div>
         </div>
         
-        {/* Text Content */}
-        <p className={`text-sm sm:text-base leading-relaxed mb-3 ${
-          isActive ? 'font-medium text-primary' : 'text-foreground'
-        }`}>
-          {line.text}
-        </p>
+        {/* Text Content with Word Highlighting */}
+        <div className={`mb-3 ${isActive ? 'font-medium text-primary' : 'text-foreground'}`}>
+          <WordHighlight
+            text={line.text}
+            currentTime={currentTime}
+            startTime={line.startTime}
+            endTime={line.endTime}
+          />
+        </div>
 
         {/* Summary */}
         {showSummary && summary && (
