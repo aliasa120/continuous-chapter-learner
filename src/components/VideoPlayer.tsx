@@ -105,7 +105,12 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   };
 
   const openPlayer = () => {
-    if (!audioUrl || transcriptionLines.length === 0) return;
+    if (!audioUrl || transcriptionLines.length === 0) {
+      console.log('Cannot open player - missing audioUrl or transcription');
+      return;
+    }
+    
+    console.log('Opening player with transcription lines:', transcriptionLines.length);
     
     const params = new URLSearchParams({
       audioUrl,
@@ -114,6 +119,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     });
     
     const url = `/player?${params.toString()}`;
+    console.log('Player URL:', url);
     
     if (isMobile) {
       // On mobile, navigate to the same page but in fullscreen mode
@@ -132,6 +138,8 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
   if (!audioUrl) return null;
 
+  const hasTranscription = transcriptionLines.length > 0;
+
   return (
     <Card className="border-primary/20 shadow-lg bg-card backdrop-blur">
       <CardHeader className="pb-4">
@@ -139,17 +147,34 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
           <CardTitle className="flex items-center gap-2 text-primary">
             {isVideo ? '🎬' : '🎵'} {isVideo ? 'Video' : 'Audio'} Player
           </CardTitle>
-          {transcriptionLines.length > 0 && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={openPlayer}
-              className="border-primary text-primary hover:bg-primary/10"
-              title={isMobile ? "Open fullscreen player" : "Open in separate tab with subtitles"}
-            >
-              {isMobile ? <Maximize className="h-4 w-4" /> : <ExternalLink className="h-4 w-4" />}
-            </Button>
-          )}
+          <div className="flex gap-2">
+            {hasTranscription && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={openPlayer}
+                className="border-primary text-primary hover:bg-primary/10 px-3 py-2"
+                title={isMobile ? "Open fullscreen player" : "Open in separate tab with subtitles"}
+              >
+                {isMobile ? (
+                  <>
+                    <Maximize className="h-4 w-4 mr-1" />
+                    <span className="hidden sm:inline">Fullscreen</span>
+                  </>
+                ) : (
+                  <>
+                    <ExternalLink className="h-4 w-4 mr-1" />
+                    <span className="hidden sm:inline">New Tab</span>
+                  </>
+                )}
+              </Button>
+            )}
+            {!hasTranscription && (
+              <div className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded">
+                Complete transcription to access player
+              </div>
+            )}
+          </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">

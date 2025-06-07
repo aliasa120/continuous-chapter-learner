@@ -1,3 +1,4 @@
+
 import { GoogleGenAI } from '@google/genai';
 
 export interface TranscriptionLine {
@@ -20,7 +21,7 @@ const HARDCODED_API_KEY = 'AIzaSyDcvqkBlNTX1mhT6y7e-BK6Ix-AdCbR95A';
 export const transcribeWithGemini = async ({ file, language, onProgress }: TranscriptionOptions): Promise<TranscriptionLine[]> => {
   try {
     console.log('Starting transcription with Gemini 2.5 Flash Preview');
-    console.log('Target language:', language, 'File:', file.name, 'Size:', file.size);
+    console.log('Target language:', language, 'File:', file.name, 'Size:', file.size, 'Type:', file.type);
     
     onProgress?.(5);
     
@@ -28,7 +29,8 @@ export const transcribeWithGemini = async ({ file, language, onProgress }: Trans
       apiKey: HARDCODED_API_KEY,
     });
 
-    const model = 'gemini-2.5-flash-preview-05-20';
+    const model = 'gemini-2.0-flash-lite';
+    console.log('Using model:', model);
 
     onProgress?.(15);
 
@@ -71,7 +73,8 @@ ENHANCED FEATURES:
 - Filter out background noise descriptions
 
 CRITICAL: ALL output text must be in ${targetLanguage} language regardless of source language.
-IMPORTANT: Always provide timestamps and speaker information for every segment.`;
+IMPORTANT: Always provide timestamps and speaker information for every segment.
+IMPORTANT: If no speech is detected, respond with: "No speech detected in this audio/video file."`;
 
     const contents = [
       {
@@ -90,7 +93,7 @@ IMPORTANT: Always provide timestamps and speaker information for every segment.`
       },
     ];
 
-    console.log('Sending transcription request to Gemini 2.5 Flash Preview...');
+    console.log('Sending transcription request to Gemini model...');
     onProgress?.(40);
 
     const response = await ai.models.generateContentStream({
@@ -118,15 +121,23 @@ IMPORTANT: Always provide timestamps and speaker information for every segment.`
         const progress = Math.min(95, 40 + (chunkCount * 2));
         onProgress?.(progress);
         
-        console.log(`Received chunk ${chunkCount}, total length: ${transcriptionText.length}`);
+        console.log(`Received chunk ${chunkCount}, current text length: ${transcriptionText.length}`);
       }
     }
     
-    console.log('Full transcription response received:', transcriptionText);
+    console.log('Full transcription response received. Total length:', transcriptionText.length);
+    console.log('Raw transcription text:', transcriptionText);
     onProgress?.(98);
 
     if (!transcriptionText.trim()) {
-      throw new Error('No transcription content received from the API');
+      console.error('No transcription content received from the API');
+      throw new Error('No transcription content received from the API. The file might be too large or contain no speech.');
+    }
+
+    // Check for "no speech detected" response
+    if (transcriptionText.toLowerCase().includes('no speech detected')) {
+      console.log('No speech detected in the file');
+      throw new Error('No speech was detected in this audio/video file. Please check if the file contains clear audio.');
     }
 
     const parsedLines = parseEnhancedTranscription(transcriptionText);
@@ -141,28 +152,33 @@ IMPORTANT: Always provide timestamps and speaker information for every segment.`
         onProgress?.(100);
         return fallbackLines;
       }
-      throw new Error('Failed to parse transcription response');
+      console.error('Both enhanced and fallback parsing failed');
+      throw new Error('Failed to parse transcription response. The audio might be unclear or contain no speech.');
     }
     
     onProgress?.(100);
+    console.log('Transcription completed successfully with', parsedLines.length, 'segments');
     return parsedLines;
   } catch (error) {
     console.error('Transcription error:', error);
     onProgress?.(0);
     
     if (error instanceof Error) {
-      if (error.message.includes('API_KEY')) {
+      if (error.message.includes('API_KEY') || error.message.includes('403')) {
         throw new Error('API key authentication failed. Please contact support.');
       }
-      if (error.message.includes('quota')) {
+      if (error.message.includes('quota') || error.message.includes('429')) {
         throw new Error('API quota exceeded. Please try again later.');
       }
-      if (error.message.includes('file size') || error.message.includes('too large')) {
-        throw new Error('File size too large. Please use a smaller file.');
+      if (error.message.includes('file size') || error.message.includes('too large') || error.message.includes('413')) {
+        throw new Error('File size too large. Please use a smaller file (max 100MB).');
+      }
+      if (error.message.includes('no speech') || error.message.includes('No speech')) {
+        throw error; // Re-throw the specific error message
       }
     }
     
-    throw new Error('Transcription failed. Please try again or contact support.');
+    throw new Error('Transcription failed. Please check if your file contains clear audio and try again.');
   }
 };
 
