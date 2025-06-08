@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -11,7 +10,6 @@ import LanguageSelector from '../components/LanguageSelector';
 import VideoPlayer from '../components/VideoPlayer';
 import TranscriptionResult from '../components/TranscriptionResult';
 import MobileTranscriptionResult from '../components/MobileTranscriptionResult';
-import TranscriptionSettings from '../components/TranscriptionSettings';
 import { transcribeWithGemini, type TranscriptionLine } from '../utils/geminiTranscription';
 import { useTranscriptionHistory } from '../hooks/useTranscriptionHistory';
 import { useSettings } from '../contexts/SettingsContext';
@@ -256,8 +254,6 @@ const TranscribePage = () => {
                   <label className="text-sm font-medium text-foreground mb-2 block">Language</label>
                   <LanguageSelector language={language} setLanguage={setLanguage} />
                 </div>
-                <Separator className="my-4" />
-                <TranscriptionSettings />
               </CardContent>
             </Card>
 

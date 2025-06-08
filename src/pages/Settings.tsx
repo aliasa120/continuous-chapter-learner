@@ -5,7 +5,9 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
-import { Settings as SettingsIcon, Volume2, Palette, Globe, Shield, FileText, Download, Trash2, Moon, Sun, History, Eye, Award } from 'lucide-react';
+import { Slider } from '@/components/ui/slider';
+import { Label } from '@/components/ui/label';
+import { Settings as SettingsIcon, Volume2, Palette, Globe, Shield, FileText, Download, Trash2, Moon, Sun, History, Eye, Award, Zap } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { useSettings } from '../contexts/SettingsContext';
 import { useTranscriptionHistory } from '../hooks/useTranscriptionHistory';
@@ -27,7 +29,15 @@ const Settings = () => {
     notifications,
     setNotifications,
     saveTranscripts,
-    setSaveTranscripts
+    setSaveTranscripts,
+    wordHighlightColor,
+    setWordHighlightColor,
+    wordHighlightOpacity,
+    setWordHighlightOpacity,
+    wordHighlightAnimation,
+    setWordHighlightAnimation,
+    timestampPlayerMode,
+    setTimestampPlayerMode
   } = useSettings();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -50,7 +60,11 @@ const Settings = () => {
         notifications,
         saveTranscripts,
         autoScroll,
-        showConfidence
+        showConfidence,
+        wordHighlightColor,
+        wordHighlightOpacity,
+        wordHighlightAnimation,
+        timestampPlayerMode
       },
       exportDate: new Date().toISOString()
     };
@@ -82,15 +96,64 @@ const Settings = () => {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Appearance Settings */}
-          <Card className="border-primary/20 shadow-lg">
-            <CardHeader className="pb-4">
-              <CardTitle className="flex items-center gap-2 text-primary">
-                <Palette className="h-5 w-5" />
-                Appearance
+          {/* Playback Settings */}
+          <Card className="border-primary/10 bg-primary/5">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm flex items-center gap-2 text-primary">
+                <Volume2 className="h-4 w-4" />
+                Playback
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="auto-play" className="text-sm text-foreground">Auto Play</Label>
+                <Switch
+                  id="auto-play"
+                  checked={autoPlay}
+                  onCheckedChange={setAutoPlay}
+                />
+              </div>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="auto-scroll" className="text-sm text-foreground">Auto Scroll</Label>
+                <Switch
+                  id="auto-scroll"
+                  checked={autoScroll}
+                  onCheckedChange={setAutoScroll}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-sm text-foreground">Timestamp Player Mode</Label>
+                <Select value={timestampPlayerMode} onValueChange={setTimestampPlayerMode}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="segment">Play Segment Only</SelectItem>
+                    <SelectItem value="continuous">Play Continuously</SelectItem>
+                    <SelectItem value="loop">Loop Segment</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Display Settings */}
+          <Card className="border-secondary/10 bg-secondary/5">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm flex items-center gap-2 text-secondary">
+                <Eye className="h-4 w-4" />
+                Display
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="show-confidence" className="text-sm text-foreground">Show Confidence</Label>
+                <Switch
+                  id="show-confidence"
+                  checked={showConfidence}
+                  onCheckedChange={setShowConfidence}
+                />
+              </div>
               <div className="flex items-center justify-between">
                 <div>
                   <p className="font-medium">Dark mode</p>
@@ -102,54 +165,75 @@ const Settings = () => {
                   <Moon className="h-4 w-4 text-blue-500" />
                 </div>
               </div>
+            </CardContent>
+          </Card>
 
-              <Separator />
-
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium flex items-center gap-2">
-                    <Eye className="h-4 w-4" />
-                    Auto-scroll to active line
-                  </p>
-                  <p className="text-sm text-muted-foreground">Automatically scroll to the currently playing segment</p>
-                </div>
-                <Switch checked={autoScroll} onCheckedChange={setAutoScroll} />
+          {/* Word Highlighting */}
+          <Card className="border-accent/10 bg-accent/5">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm flex items-center gap-2 text-accent">
+                <Palette className="h-4 w-4" />
+                Word Highlighting
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="space-y-2">
+                <Label className="text-sm text-foreground">Highlight Color</Label>
+                <Select value={wordHighlightColor} onValueChange={setWordHighlightColor}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="primary">Primary</SelectItem>
+                    <SelectItem value="secondary">Secondary</SelectItem>
+                    <SelectItem value="accent">Accent</SelectItem>
+                    <SelectItem value="success">Success</SelectItem>
+                    <SelectItem value="warning">Warning</SelectItem>
+                    <SelectItem value="destructive">Destructive</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="space-y-2">
+                <Label className="text-sm text-foreground">Highlight Opacity ({wordHighlightOpacity}%)</Label>
+                <Slider
+                  value={[wordHighlightOpacity]}
+                  onValueChange={(value) => setWordHighlightOpacity(value[0])}
+                  max={100}
+                  min={10}
+                  step={10}
+                  className="w-full"
+                />
               </div>
 
-              <Separator />
-
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium flex items-center gap-2">
-                    <Award className="h-4 w-4" />
-                    Show confidence scores
-                  </p>
-                  <p className="text-sm text-muted-foreground">Display AI confidence percentages</p>
-                </div>
-                <Switch checked={showConfidence} onCheckedChange={setShowConfidence} />
+              <div className="space-y-2">
+                <Label className="text-sm text-foreground">Animation Style</Label>
+                <Select value={wordHighlightAnimation} onValueChange={setWordHighlightAnimation}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pulse">Pulse</SelectItem>
+                    <SelectItem value="glow">Glow</SelectItem>
+                    <SelectItem value="bounce">Bounce</SelectItem>
+                    <SelectItem value="fade">Fade</SelectItem>
+                    <SelectItem value="scale">Scale</SelectItem>
+                    <SelectItem value="none">None</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </CardContent>
           </Card>
 
-          {/* Audio & Playback Settings */}
-          <Card className="border-accent/20 shadow-lg">
+          {/* Language & Audio Settings */}
+          <Card className="border-warning/20 shadow-lg">
             <CardHeader className="pb-4">
-              <CardTitle className="flex items-center gap-2 text-accent">
-                <Volume2 className="h-5 w-5" />
-                Audio & Playback
+              <CardTitle className="flex items-center gap-2 text-warning">
+                <Globe className="h-5 w-5" />
+                Language & Audio
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium">Auto-play after transcription</p>
-                  <p className="text-sm text-muted-foreground">Automatically start playback when transcription completes</p>
-                </div>
-                <Switch checked={autoPlay} onCheckedChange={setAutoPlay} />
-              </div>
-
-              <Separator />
-
               <div className="space-y-2">
                 <label className="font-medium">Default transcription language</label>
                 <Select value={defaultLanguage} onValueChange={setDefaultLanguage}>
@@ -233,9 +317,9 @@ const Settings = () => {
           </Card>
 
           {/* Advanced Settings */}
-          <Card className="border-warning/20 shadow-lg">
+          <Card className="border-muted/20 shadow-lg lg:col-span-2">
             <CardHeader className="pb-4">
-              <CardTitle className="flex items-center gap-2 text-warning">
+              <CardTitle className="flex items-center gap-2">
                 <SettingsIcon className="h-5 w-5" />
                 Advanced
               </CardTitle>
