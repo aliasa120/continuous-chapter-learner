@@ -1,242 +1,286 @@
 
-import React, { useState } from 'react';
-import { useAuth } from '../contexts/AuthContext';
-import { useSettings } from '../contexts/SettingsContext';
-import { Button } from '@/components/ui/button';
+import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
-import { Slider } from '@/components/ui/slider';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { toast } from 'sonner';
-import { 
-  Settings as SettingsIcon, 
-  Volume2, 
-  Eye, 
-  Palette, 
-  User, 
-  Shield,
-  Crown,
-  Globe,
-  CreditCard,
-  Users,
-  Cpu,
-  Phone,
-  Mail
-} from 'lucide-react';
-import TranscriptionSettings from '../components/TranscriptionSettings';
-import AdminDashboard from '../components/AdminDashboard';
+import { Separator } from '@/components/ui/separator';
+import { Settings as SettingsIcon, Volume2, Palette, Globe, Shield, FileText, Download, Trash2, Moon, Sun, History, Eye, Award } from 'lucide-react';
+import { useTheme } from '../contexts/ThemeContext';
+import { useSettings } from '../contexts/SettingsContext';
+import { useTranscriptionHistory } from '../hooks/useTranscriptionHistory';
+import { useNavigate } from 'react-router-dom';
+import { useToast } from '@/hooks/use-toast';
 
 const Settings = () => {
-  const { user } = useAuth();
-  const { 
-    notifications, setNotifications,
-    saveTranscripts, setSaveTranscripts,
-    defaultLanguage, setDefaultLanguage
+  const { theme, toggleTheme } = useTheme();
+  const { history, clearHistory } = useTranscriptionHistory();
+  const {
+    autoPlay,
+    setAutoPlay,
+    autoScroll,
+    setAutoScroll,
+    showConfidence,
+    setShowConfidence,
+    defaultLanguage,
+    setDefaultLanguage,
+    notifications,
+    setNotifications,
+    saveTranscripts,
+    setSaveTranscripts
   } = useSettings();
-  
-  const [adminEmail, setAdminEmail] = useState('');
-  const [adminPassword, setAdminPassword] = useState('');
-  const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(false);
+  const navigate = useNavigate();
+  const { toast } = useToast();
 
-  const handleAdminLogin = () => {
-    if (adminEmail === 'legendgamerz9999@gmail.com' && adminPassword === '@1S2i3f4') {
-      setIsAdminLoggedIn(true);
-      toast.success('Admin access granted');
-    } else {
-      toast.error('Invalid admin credentials');
-    }
+  const handleClearHistory = () => {
+    clearHistory();
+    toast({
+      title: "History cleared",
+      description: "All transcription history has been removed.",
+    });
   };
 
-  const handleAdminLogout = () => {
-    setIsAdminLoggedIn(false);
-    setAdminEmail('');
-    setAdminPassword('');
-    toast.info('Admin logged out');
+  const handleExportData = () => {
+    const data = {
+      history,
+      settings: {
+        theme,
+        autoPlay,
+        defaultLanguage,
+        notifications,
+        saveTranscripts,
+        autoScroll,
+        showConfidence
+      },
+      exportDate: new Date().toISOString()
+    };
+    
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `transcription_data_${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    toast({
+      title: "Data exported",
+      description: "Your data has been downloaded successfully.",
+    });
   };
-
-  if (isAdminLoggedIn) {
-    return <AdminDashboard onLogout={handleAdminLogout} />;
-  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-accent/5 py-6">
-      <div className="container mx-auto px-4 max-w-4xl">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold text-primary flex items-center gap-2">
-            <SettingsIcon className="h-8 w-8" />
+    <div className="container mx-auto px-4 py-6">
+      <div className="max-w-4xl mx-auto">
+        <div className="mb-8">
+          <h1 className="text-3xl md:text-4xl font-bold mb-2 premium-gradient bg-clip-text text-transparent">
             Settings
           </h1>
-          <p className="text-muted-foreground mt-2">
-            Customize your transcription experience and manage your account
-          </p>
+          <p className="text-muted-foreground">Customize your transcription experience</p>
         </div>
 
-        <Tabs defaultValue="general" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="general">General</TabsTrigger>
-            <TabsTrigger value="transcription">Transcription</TabsTrigger>
-            <TabsTrigger value="admin">Admin</TabsTrigger>
-          </TabsList>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Appearance Settings */}
+          <Card className="border-primary/20 shadow-lg">
+            <CardHeader className="pb-4">
+              <CardTitle className="flex items-center gap-2 text-primary">
+                <Palette className="h-5 w-5" />
+                Appearance
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-medium">Dark mode</p>
+                  <p className="text-sm text-muted-foreground">Switch between light and dark themes</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Sun className="h-4 w-4 text-yellow-500" />
+                  <Switch checked={theme === 'dark'} onCheckedChange={toggleTheme} />
+                  <Moon className="h-4 w-4 text-blue-500" />
+                </div>
+              </div>
 
-          <TabsContent value="general" className="space-y-6">
-            {/* User Info */}
-            <Card className="border-primary/20 shadow-lg bg-card/50 backdrop-blur">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-primary">
-                  <User className="h-5 w-5" />
-                  Account Information
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label className="text-foreground">Email</Label>
-                    <p className="text-sm text-muted-foreground">{user?.email || 'Not logged in'}</p>
-                  </div>
-                  <Badge variant="secondary" className="flex items-center gap-1">
-                    <Crown className="h-3 w-3" />
-                    Free Plan
-                  </Badge>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label className="text-foreground">Daily Transcriptions</Label>
-                    <p className="text-sm text-muted-foreground">1 / 1 used today</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+              <Separator />
 
-            {/* General Settings */}
-            <Card className="border-primary/20 shadow-lg bg-card/50 backdrop-blur">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-primary">
-                  <Globe className="h-5 w-5" />
-                  General Settings
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label className="text-foreground">Default Language</Label>
-                  <Select value={defaultLanguage} onValueChange={setDefaultLanguage}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="en">English</SelectItem>
-                      <SelectItem value="es">Spanish</SelectItem>
-                      <SelectItem value="fr">French</SelectItem>
-                      <SelectItem value="de">German</SelectItem>
-                      <SelectItem value="it">Italian</SelectItem>
-                      <SelectItem value="pt">Portuguese</SelectItem>
-                      <SelectItem value="ru">Russian</SelectItem>
-                      <SelectItem value="ja">Japanese</SelectItem>
-                      <SelectItem value="ko">Korean</SelectItem>
-                      <SelectItem value="zh">Chinese</SelectItem>
-                    </SelectContent>
-                  </Select>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-medium flex items-center gap-2">
+                    <Eye className="h-4 w-4" />
+                    Auto-scroll to active line
+                  </p>
+                  <p className="text-sm text-muted-foreground">Automatically scroll to the currently playing segment</p>
                 </div>
+                <Switch checked={autoScroll} onCheckedChange={setAutoScroll} />
+              </div>
 
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label className="text-foreground">Enable Notifications</Label>
-                    <p className="text-sm text-muted-foreground">Get notified about transcription status</p>
-                  </div>
-                  <Switch checked={notifications} onCheckedChange={setNotifications} />
-                </div>
+              <Separator />
 
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label className="text-foreground">Save Transcription History</Label>
-                    <p className="text-sm text-muted-foreground">Store transcripts locally for future access</p>
-                  </div>
-                  <Switch checked={saveTranscripts} onCheckedChange={setSaveTranscripts} />
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-medium flex items-center gap-2">
+                    <Award className="h-4 w-4" />
+                    Show confidence scores
+                  </p>
+                  <p className="text-sm text-muted-foreground">Display AI confidence percentages</p>
                 </div>
-              </CardContent>
-            </Card>
+                <Switch checked={showConfidence} onCheckedChange={setShowConfidence} />
+              </div>
+            </CardContent>
+          </Card>
 
-            {/* Upgrade Plan */}
-            <Card className="border-primary/20 shadow-lg bg-gradient-to-r from-primary/10 to-accent/10">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-primary">
-                  <CreditCard className="h-5 w-5" />
-                  Upgrade Your Plan
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground mb-4">
-                  Unlock more transcriptions per day with our premium plans
-                </p>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="border rounded-lg p-4 bg-background/50">
-                    <h3 className="font-semibold text-primary">Basic - $1</h3>
-                    <p className="text-sm text-muted-foreground">5 transcriptions/day</p>
-                  </div>
-                  <div className="border rounded-lg p-4 bg-background/50">
-                    <h3 className="font-semibold text-primary">Pro - $2</h3>
-                    <p className="text-sm text-muted-foreground">10 transcriptions/day</p>
-                  </div>
-                  <div className="border rounded-lg p-4 bg-background/50">
-                    <h3 className="font-semibold text-primary">Premium - $3</h3>
-                    <p className="text-sm text-muted-foreground">20 transcriptions/day</p>
-                  </div>
+          {/* Audio & Playback Settings */}
+          <Card className="border-accent/20 shadow-lg">
+            <CardHeader className="pb-4">
+              <CardTitle className="flex items-center gap-2 text-accent">
+                <Volume2 className="h-5 w-5" />
+                Audio & Playback
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-medium">Auto-play after transcription</p>
+                  <p className="text-sm text-muted-foreground">Automatically start playback when transcription completes</p>
                 </div>
-                <Button className="w-full mt-4" variant="outline">
-                  Contact Us for Upgrade
-                </Button>
-              </CardContent>
-            </Card>
-          </TabsContent>
+                <Switch checked={autoPlay} onCheckedChange={setAutoPlay} />
+              </div>
 
-          <TabsContent value="transcription">
-            <TranscriptionSettings />
-          </TabsContent>
+              <Separator />
 
-          <TabsContent value="admin" className="space-y-6">
-            <Card className="border-destructive/20 shadow-lg bg-card/50 backdrop-blur">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-destructive">
-                  <Shield className="h-5 w-5" />
-                  Admin Access
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="admin-email">Admin Email</Label>
-                  <Input
-                    id="admin-email"
-                    type="email"
-                    value={adminEmail}
-                    onChange={(e) => setAdminEmail(e.target.value)}
-                    placeholder="Enter admin email"
-                  />
+              <div className="space-y-2">
+                <label className="font-medium">Default transcription language</label>
+                <Select value={defaultLanguage} onValueChange={setDefaultLanguage}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="en">English</SelectItem>
+                    <SelectItem value="es">Spanish</SelectItem>
+                    <SelectItem value="fr">French</SelectItem>
+                    <SelectItem value="de">German</SelectItem>
+                    <SelectItem value="it">Italian</SelectItem>
+                    <SelectItem value="pt">Portuguese</SelectItem>
+                    <SelectItem value="zh">Chinese</SelectItem>
+                    <SelectItem value="ja">Japanese</SelectItem>
+                    <SelectItem value="ko">Korean</SelectItem>
+                    <SelectItem value="ar">Arabic</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <Separator />
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-medium">Notifications</p>
+                  <p className="text-sm text-muted-foreground">Get notified about transcription completion</p>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="admin-password">Admin Password</Label>
-                  <Input
-                    id="admin-password"
-                    type="password"
-                    value={adminPassword}
-                    onChange={(e) => setAdminPassword(e.target.value)}
-                    placeholder="Enter admin password"
-                  />
+                <Switch checked={notifications} onCheckedChange={setNotifications} />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Data & History Settings */}
+          <Card className="border-success/20 shadow-lg">
+            <CardHeader className="pb-4">
+              <CardTitle className="flex items-center gap-2 text-success">
+                <Shield className="h-5 w-5" />
+                Data & History
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-medium">Save transcripts locally</p>
+                  <p className="text-sm text-muted-foreground">Keep transcription history on this device</p>
                 </div>
+                <Switch checked={saveTranscripts} onCheckedChange={setSaveTranscripts} />
+              </div>
+
+              <Separator />
+
+              <div className="space-y-3">
                 <Button 
-                  onClick={handleAdminLogin}
-                  className="w-full"
-                  variant="destructive"
+                  variant="outline" 
+                  className="w-full justify-start hover:bg-primary/10"
+                  onClick={() => navigate('/history')}
                 >
-                  <Shield className="h-4 w-4 mr-2" />
-                  Login as Admin
+                  <History className="h-4 w-4 mr-2" />
+                  View Transcription History ({history.length} items)
                 </Button>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+                <Button 
+                  variant="outline" 
+                  className="w-full justify-start hover:bg-primary/10"
+                  onClick={handleExportData}
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Export All Data
+                </Button>
+                <Button 
+                  variant="outline" 
+                  className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10"
+                  onClick={handleClearHistory}
+                  disabled={history.length === 0}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Clear All History
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Advanced Settings */}
+          <Card className="border-warning/20 shadow-lg">
+            <CardHeader className="pb-4">
+              <CardTitle className="flex items-center gap-2 text-warning">
+                <SettingsIcon className="h-5 w-5" />
+                Advanced
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-3 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Version:</span>
+                  <span className="font-medium">2.1.0</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Transcription Model:</span>
+                  <span className="font-medium">Gemini 2.5 Flash Preview</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Analysis Model:</span>
+                  <span className="font-medium">Gemini 2.0 Flash-Lite</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Last Updated:</span>
+                  <span className="font-medium">Today</span>
+                </div>
+              </div>
+
+              <Separator />
+
+              <div className="space-y-2">
+                <p className="text-sm text-muted-foreground">
+                  AI-powered transcription with advanced language support, speaker identification, and real-time processing.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <Button variant="outline" size="sm" className="text-xs">
+                  <FileText className="h-3 w-3 mr-1" />
+                  Release Notes
+                </Button>
+                <Button variant="outline" size="sm" className="text-xs">
+                  <Globe className="h-3 w-3 mr-1" />
+                  Support
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   );

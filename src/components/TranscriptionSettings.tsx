@@ -20,37 +20,36 @@ const TranscriptionSettings: React.FC = () => {
   } = useSettings();
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Playback Settings */}
-      <Card className="border-primary/20 shadow-lg bg-card/50 backdrop-blur">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-primary">
-            <Volume2 className="h-5 w-5" />
-            Playback Settings
+      <Card className="border-primary/10 bg-primary/5">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm flex items-center gap-2 text-primary">
+            <Volume2 className="h-4 w-4" />
+            Playback
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-3">
           <div className="flex items-center justify-between">
-            <div>
-              <Label className="text-foreground">Auto Play</Label>
-              <p className="text-sm text-muted-foreground">Automatically play audio when clicking timestamps</p>
-            </div>
-            <Switch checked={autoPlay} onCheckedChange={setAutoPlay} />
+            <Label htmlFor="auto-play" className="text-sm text-foreground">Auto Play</Label>
+            <Switch
+              id="auto-play"
+              checked={autoPlay}
+              onCheckedChange={setAutoPlay}
+            />
           </div>
-          
           <div className="flex items-center justify-between">
-            <div>
-              <Label className="text-foreground">Auto Scroll</Label>
-              <p className="text-sm text-muted-foreground">Automatically scroll to active transcript segment</p>
-            </div>
-            <Switch checked={autoScroll} onCheckedChange={setAutoScroll} />
+            <Label htmlFor="auto-scroll" className="text-sm text-foreground">Auto Scroll</Label>
+            <Switch
+              id="auto-scroll"
+              checked={autoScroll}
+              onCheckedChange={setAutoScroll}
+            />
           </div>
-          
           <div className="space-y-2">
-            <Label className="text-foreground">Timestamp Player Mode</Label>
-            <p className="text-sm text-muted-foreground">Control how timestamp clicking behaves</p>
+            <Label className="text-sm text-foreground">Timestamp Player Mode</Label>
             <Select value={timestampPlayerMode} onValueChange={setTimestampPlayerMode}>
-              <SelectTrigger>
+              <SelectTrigger className="w-full">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -64,38 +63,38 @@ const TranscriptionSettings: React.FC = () => {
       </Card>
 
       {/* Display Settings */}
-      <Card className="border-primary/20 shadow-lg bg-card/50 backdrop-blur">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-primary">
-            <Eye className="h-5 w-5" />
-            Display Settings
+      <Card className="border-secondary/10 bg-secondary/5">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm flex items-center gap-2 text-secondary">
+            <Eye className="h-4 w-4" />
+            Display
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-3">
           <div className="flex items-center justify-between">
-            <div>
-              <Label className="text-foreground">Show Confidence Scores</Label>
-              <p className="text-sm text-muted-foreground">Display AI confidence percentages for each segment</p>
-            </div>
-            <Switch checked={showConfidence} onCheckedChange={setShowConfidence} />
+            <Label htmlFor="show-confidence" className="text-sm text-foreground">Show Confidence</Label>
+            <Switch
+              id="show-confidence"
+              checked={showConfidence}
+              onCheckedChange={setShowConfidence}
+            />
           </div>
         </CardContent>
       </Card>
 
       {/* Word Highlighting */}
-      <Card className="border-primary/20 shadow-lg bg-card/50 backdrop-blur">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-primary">
-            <Palette className="h-5 w-5" />
+      <Card className="border-accent/10 bg-accent/5">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm flex items-center gap-2 text-accent">
+            <Palette className="h-4 w-4" />
             Word Highlighting
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-3">
           <div className="space-y-2">
-            <Label className="text-foreground">Highlight Color</Label>
-            <p className="text-sm text-muted-foreground">Choose the color for word highlighting</p>
+            <Label className="text-sm text-foreground">Highlight Color</Label>
             <Select value={wordHighlightColor} onValueChange={setWordHighlightColor}>
-              <SelectTrigger>
+              <SelectTrigger className="w-full">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -110,8 +109,7 @@ const TranscriptionSettings: React.FC = () => {
           </div>
           
           <div className="space-y-2">
-            <Label className="text-foreground">Highlight Opacity ({wordHighlightOpacity}%)</Label>
-            <p className="text-sm text-muted-foreground">Adjust the transparency of word highlights</p>
+            <Label className="text-sm text-foreground">Highlight Opacity ({wordHighlightOpacity}%)</Label>
             <Slider
               value={[wordHighlightOpacity]}
               onValueChange={(value) => setWordHighlightOpacity(value[0])}
@@ -123,10 +121,9 @@ const TranscriptionSettings: React.FC = () => {
           </div>
 
           <div className="space-y-2">
-            <Label className="text-foreground">Animation Style</Label>
-            <p className="text-sm text-muted-foreground">Choose the animation effect for word highlighting</p>
+            <Label className="text-sm text-foreground">Animation Style</Label>
             <Select value={wordHighlightAnimation} onValueChange={setWordHighlightAnimation}>
-              <SelectTrigger>
+              <SelectTrigger className="w-full">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
