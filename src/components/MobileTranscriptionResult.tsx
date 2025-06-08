@@ -152,6 +152,8 @@ const MobileTranscriptionResult: React.FC<MobileTranscriptionResultProps> = ({
                           currentTime={currentTime}
                           seekToTimestamp={seekToTimestamp}
                           isPlaying={isPlaying}
+                          globalIsPlaying={isPlaying}
+                          onGlobalPlayPause={onPlayPause}
                         />
                       </div>
                     );
