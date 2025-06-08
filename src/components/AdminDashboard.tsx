@@ -28,7 +28,6 @@ import {
   Shield
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
 
 interface AIModel {
   id: string;
@@ -85,56 +84,36 @@ const AdminDashboard: React.FC = () => {
   const [newModelCurl, setNewModelCurl] = useState('');
   const { toast } = useToast();
 
-  // Load data on component mount
+  // Mock data loading - in a real app, this would load from Supabase
   useEffect(() => {
-    loadModels();
-    loadUsers();
-    loadContactInfo();
-  }, []);
-
-  const loadModels = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('ai_models')
-        .select('*')
-        .order('created_at', { ascending: false });
-      
-      if (error) throw error;
-      setModels(data || []);
-    } catch (error) {
-      console.error('Error loading models:', error);
-    }
-  };
-
-  const loadUsers = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('user_profiles')
-        .select('*')
-        .order('created_at', { ascending: false });
-      
-      if (error) throw error;
-      setUsers(data || []);
-    } catch (error) {
-      console.error('Error loading users:', error);
-    }
-  };
-
-  const loadContactInfo = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('admin_settings')
-        .select('*')
-        .eq('key', 'contact_info')
-        .single();
-      
-      if (data && data.value) {
-        setContactInfo(data.value);
+    // Mock models data
+    setModels([
+      {
+        id: '1',
+        name: 'Gemini 2.0 Flash',
+        endpoint: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent',
+        headers: { 'Content-Type': 'application/json' },
+        body_template: '{"contents":[{"parts":[{"text":"{{prompt}}"}]}]}',
+        model_type: 'transcription',
+        status: 'active',
+        created_at: new Date().toISOString()
       }
-    } catch (error) {
-      console.error('Error loading contact info:', error);
-    }
-  };
+    ]);
+
+    // Mock users data
+    setUsers([
+      {
+        id: '1',
+        email: 'user@example.com',
+        name: 'Test User',
+        plan: 'free',
+        status: 'active',
+        daily_usage: 0,
+        created_at: new Date().toISOString(),
+        last_active: new Date().toISOString()
+      }
+    ]);
+  }, []);
 
   const parseCurlToModel = (curlCommand: string): Partial<AIModel> | null => {
     try {
@@ -191,7 +170,7 @@ const AdminDashboard: React.FC = () => {
     }
   };
 
-  const addModelFromCurl = async () => {
+  const addModelFromCurl = () => {
     const parsedModel = parseCurlToModel(newModelCurl);
     if (!parsedModel) {
       toast({
@@ -202,160 +181,81 @@ const AdminDashboard: React.FC = () => {
       return;
     }
 
-    try {
-      const { data, error } = await supabase
-        .from('ai_models')
-        .insert([parsedModel])
-        .select()
-        .single();
+    const newModel: AIModel = {
+      id: Date.now().toString(),
+      created_at: new Date().toISOString(),
+      ...parsedModel as Omit<AIModel, 'id' | 'created_at'>
+    };
 
-      if (error) throw error;
-
-      setModels(prev => [data, ...prev]);
-      setNewModelCurl('');
-      toast({
-        title: "Success",
-        description: "Model added successfully!"
-      });
-    } catch (error) {
-      console.error('Error adding model:', error);
-      toast({
-        title: "Error",
-        description: "Failed to add model to database.",
-        variant: "destructive"
-      });
-    }
+    setModels(prev => [newModel, ...prev]);
+    setNewModelCurl('');
+    toast({
+      title: "Success",
+      description: "Model added successfully! Note: This is stored locally until database is set up."
+    });
   };
 
-  const toggleModelStatus = async (modelId: string, currentStatus: string) => {
+  const toggleModelStatus = (modelId: string, currentStatus: string) => {
     const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
     
-    try {
-      const { error } = await supabase
-        .from('ai_models')
-        .update({ status: newStatus })
-        .eq('id', modelId);
+    setModels(prev => prev.map(model => 
+      model.id === modelId ? { ...model, status: newStatus as 'active' | 'inactive' } : model
+    ));
 
-      if (error) throw error;
-
-      setModels(prev => prev.map(model => 
-        model.id === modelId ? { ...model, status: newStatus as 'active' | 'inactive' } : model
-      ));
-
-      toast({
-        title: "Success",
-        description: `Model ${newStatus === 'active' ? 'activated' : 'deactivated'}`
-      });
-    } catch (error) {
-      console.error('Error updating model status:', error);
-    }
+    toast({
+      title: "Success",
+      description: `Model ${newStatus === 'active' ? 'activated' : 'deactivated'}`
+    });
   };
 
-  const deleteModel = async (modelId: string) => {
-    try {
-      const { error } = await supabase
-        .from('ai_models')
-        .delete()
-        .eq('id', modelId);
-
-      if (error) throw error;
-
-      setModels(prev => prev.filter(model => model.id !== modelId));
-      toast({
-        title: "Success",
-        description: "Model deleted successfully"
-      });
-    } catch (error) {
-      console.error('Error deleting model:', error);
-    }
+  const deleteModel = (modelId: string) => {
+    setModels(prev => prev.filter(model => model.id !== modelId));
+    toast({
+      title: "Success",
+      description: "Model deleted successfully"
+    });
   };
 
-  const updateUserPlan = async (userId: string, newPlan: string) => {
-    try {
-      const { error } = await supabase
-        .from('user_profiles')
-        .update({ plan: newPlan })
-        .eq('id', userId);
+  const updateUserPlan = (userId: string, newPlan: string) => {
+    setUsers(prev => prev.map(user => 
+      user.id === userId ? { ...user, plan: newPlan as any } : user
+    ));
 
-      if (error) throw error;
-
-      setUsers(prev => prev.map(user => 
-        user.id === userId ? { ...user, plan: newPlan as any } : user
-      ));
-
-      toast({
-        title: "Success",
-        description: "User plan updated successfully"
-      });
-    } catch (error) {
-      console.error('Error updating user plan:', error);
-    }
+    toast({
+      title: "Success",
+      description: "User plan updated successfully"
+    });
   };
 
-  const toggleUserStatus = async (userId: string, currentStatus: string) => {
+  const toggleUserStatus = (userId: string, currentStatus: string) => {
     const newStatus = currentStatus === 'active' ? 'banned' : 'active';
     
-    try {
-      const { error } = await supabase
-        .from('user_profiles')
-        .update({ status: newStatus })
-        .eq('id', userId);
+    setUsers(prev => prev.map(user => 
+      user.id === userId ? { ...user, status: newStatus as 'active' | 'banned' } : user
+    ));
 
-      if (error) throw error;
-
-      setUsers(prev => prev.map(user => 
-        user.id === userId ? { ...user, status: newStatus as 'active' | 'banned' } : user
-      ));
-
-      toast({
-        title: "Success",
-        description: `User ${newStatus === 'active' ? 'activated' : 'banned'}`
-      });
-    } catch (error) {
-      console.error('Error updating user status:', error);
-    }
+    toast({
+      title: "Success",
+      description: `User ${newStatus === 'active' ? 'activated' : 'banned'}`
+    });
   };
 
-  const updatePricing = async (planId: string, updates: Partial<PricingPlan>) => {
-    try {
-      const { error } = await supabase
-        .from('pricing_plans')
-        .update(updates)
-        .eq('id', planId);
+  const updatePricing = (planId: string, updates: Partial<PricingPlan>) => {
+    setPricing(prev => prev.map(plan => 
+      plan.id === planId ? { ...plan, ...updates } : plan
+    ));
 
-      if (error) throw error;
-
-      setPricing(prev => prev.map(plan => 
-        plan.id === planId ? { ...plan, ...updates } : plan
-      ));
-
-      toast({
-        title: "Success",
-        description: "Pricing updated successfully"
-      });
-    } catch (error) {
-      console.error('Error updating pricing:', error);
-    }
+    toast({
+      title: "Success",
+      description: "Pricing updated successfully"
+    });
   };
 
-  const saveContactInfo = async () => {
-    try {
-      const { error } = await supabase
-        .from('admin_settings')
-        .upsert({
-          key: 'contact_info',
-          value: contactInfo
-        });
-
-      if (error) throw error;
-
-      toast({
-        title: "Success",
-        description: "Contact information updated successfully"
-      });
-    } catch (error) {
-      console.error('Error saving contact info:', error);
-    }
+  const saveContactInfo = () => {
+    toast({
+      title: "Success",
+      description: "Contact information updated successfully! Note: This is stored locally until database is set up."
+    });
   };
 
   return (
