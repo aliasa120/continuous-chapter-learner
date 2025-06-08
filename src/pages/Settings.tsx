@@ -5,32 +5,33 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
-import { Settings as SettingsIcon, Volume2, Palette, Globe, Shield, FileText, Download, Trash2, Moon, Sun, History, Eye, Award } from 'lucide-react';
+import { Settings as SettingsIcon, Volume2, Palette, Globe, Shield, FileText, Download, Trash2, Moon, Sun, History, Eye, Award, Crown } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { useSettings } from '../contexts/SettingsContext';
 import { useTranscriptionHistory } from '../hooks/useTranscriptionHistory';
+import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
+import TranscriptionSettings from '../components/TranscriptionSettings';
+import AdminDashboard from '../components/AdminDashboard';
 
 const Settings = () => {
   const { theme, toggleTheme } = useTheme();
   const { history, clearHistory } = useTranscriptionHistory();
+  const { user } = useAuth();
   const {
-    autoPlay,
-    setAutoPlay,
-    autoScroll,
-    setAutoScroll,
-    showConfidence,
-    setShowConfidence,
-    defaultLanguage,
-    setDefaultLanguage,
     notifications,
     setNotifications,
     saveTranscripts,
-    setSaveTranscripts
+    setSaveTranscripts,
+    defaultLanguage,
+    setDefaultLanguage
   } = useSettings();
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  // Check if current user is admin
+  const isAdmin = user?.email === 'legendgamerz9999@gmail.com';
 
   const handleClearHistory = () => {
     clearHistory();
@@ -45,12 +46,9 @@ const Settings = () => {
       history,
       settings: {
         theme,
-        autoPlay,
-        defaultLanguage,
         notifications,
         saveTranscripts,
-        autoScroll,
-        showConfidence
+        defaultLanguage
       },
       exportDate: new Date().toISOString()
     };
@@ -71,6 +69,11 @@ const Settings = () => {
     });
   };
 
+  // If admin, show admin dashboard
+  if (isAdmin) {
+    return <AdminDashboard />;
+  }
+
   return (
     <div className="container mx-auto px-4 py-6">
       <div className="max-w-4xl mx-auto">
@@ -82,6 +85,21 @@ const Settings = () => {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Transcription Settings */}
+          <div className="lg:col-span-2">
+            <Card className="border-primary/20 shadow-lg">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-primary">
+                  <SettingsIcon className="h-5 w-5" />
+                  Transcription Settings
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <TranscriptionSettings />
+              </CardContent>
+            </Card>
+          </div>
+
           {/* Appearance Settings */}
           <Card className="border-primary/20 shadow-lg">
             <CardHeader className="pb-4">
@@ -101,51 +119,6 @@ const Settings = () => {
                   <Switch checked={theme === 'dark'} onCheckedChange={toggleTheme} />
                   <Moon className="h-4 w-4 text-blue-500" />
                 </div>
-              </div>
-
-              <Separator />
-
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium flex items-center gap-2">
-                    <Eye className="h-4 w-4" />
-                    Auto-scroll to active line
-                  </p>
-                  <p className="text-sm text-muted-foreground">Automatically scroll to the currently playing segment</p>
-                </div>
-                <Switch checked={autoScroll} onCheckedChange={setAutoScroll} />
-              </div>
-
-              <Separator />
-
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium flex items-center gap-2">
-                    <Award className="h-4 w-4" />
-                    Show confidence scores
-                  </p>
-                  <p className="text-sm text-muted-foreground">Display AI confidence percentages</p>
-                </div>
-                <Switch checked={showConfidence} onCheckedChange={setShowConfidence} />
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Audio & Playback Settings */}
-          <Card className="border-accent/20 shadow-lg">
-            <CardHeader className="pb-4">
-              <CardTitle className="flex items-center gap-2 text-accent">
-                <Volume2 className="h-5 w-5" />
-                Audio & Playback
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium">Auto-play after transcription</p>
-                  <p className="text-sm text-muted-foreground">Automatically start playback when transcription completes</p>
-                </div>
-                <Switch checked={autoPlay} onCheckedChange={setAutoPlay} />
               </div>
 
               <Separator />
@@ -170,25 +143,15 @@ const Settings = () => {
                   </SelectContent>
                 </Select>
               </div>
-
-              <Separator />
-
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium">Notifications</p>
-                  <p className="text-sm text-muted-foreground">Get notified about transcription completion</p>
-                </div>
-                <Switch checked={notifications} onCheckedChange={setNotifications} />
-              </div>
             </CardContent>
           </Card>
 
-          {/* Data & History Settings */}
+          {/* Data & Privacy Settings */}
           <Card className="border-success/20 shadow-lg">
             <CardHeader className="pb-4">
               <CardTitle className="flex items-center gap-2 text-success">
                 <Shield className="h-5 w-5" />
-                Data & History
+                Data & Privacy
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -198,6 +161,16 @@ const Settings = () => {
                   <p className="text-sm text-muted-foreground">Keep transcription history on this device</p>
                 </div>
                 <Switch checked={saveTranscripts} onCheckedChange={setSaveTranscripts} />
+              </div>
+
+              <Separator />
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-medium">Notifications</p>
+                  <p className="text-sm text-muted-foreground">Get notified about transcription completion</p>
+                </div>
+                <Switch checked={notifications} onCheckedChange={setNotifications} />
               </div>
 
               <Separator />
@@ -232,23 +205,23 @@ const Settings = () => {
             </CardContent>
           </Card>
 
-          {/* Advanced Settings */}
-          <Card className="border-warning/20 shadow-lg">
+          {/* System Information */}
+          <Card className="border-warning/20 shadow-lg lg:col-span-2">
             <CardHeader className="pb-4">
               <CardTitle className="flex items-center gap-2 text-warning">
                 <SettingsIcon className="h-5 w-5" />
-                Advanced
+                System Information
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="space-y-3 text-sm">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Version:</span>
                   <span className="font-medium">2.1.0</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Transcription Model:</span>
-                  <span className="font-medium">Gemini 2.5 Flash Preview</span>
+                  <span className="font-medium">Gemini 2.5 Flash</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Analysis Model:</span>
@@ -261,12 +234,6 @@ const Settings = () => {
               </div>
 
               <Separator />
-
-              <div className="space-y-2">
-                <p className="text-sm text-muted-foreground">
-                  AI-powered transcription with advanced language support, speaker identification, and real-time processing.
-                </p>
-              </div>
 
               <div className="grid grid-cols-2 gap-2">
                 <Button variant="outline" size="sm" className="text-xs">

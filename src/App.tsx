@@ -18,6 +18,7 @@ import HowItWorks from "./pages/HowItWorks";
 import Terms from "./pages/Terms";
 import Settings from "./pages/Settings";
 import History from "./pages/History";
+import Payment from "./pages/Payment";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -56,6 +57,11 @@ const App = () => (
                           <Route path="/settings" element={
                             <ProtectedRoute>
                               <Settings />
+                            </ProtectedRoute>
+                          } />
+                          <Route path="/payment" element={
+                            <ProtectedRoute>
+                              <Payment />
                             </ProtectedRoute>
                           } />
                           <Route path="/auth" element={<AuthPage />} />
