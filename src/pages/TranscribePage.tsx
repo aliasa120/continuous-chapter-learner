@@ -1,15 +1,17 @@
+
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Download, FileAudio, Loader2, CheckCircle, AlertCircle, Clock, Users } from 'lucide-react';
+import { Download, FileAudio, Loader2, CheckCircle, AlertCircle, Clock, Users, Settings } from 'lucide-react';
 import FileUpload from '../components/FileUpload';
 import LanguageSelector from '../components/LanguageSelector';
 import VideoPlayer from '../components/VideoPlayer';
 import TranscriptionResult from '../components/TranscriptionResult';
 import MobileTranscriptionResult from '../components/MobileTranscriptionResult';
+import TranscriptionSettings from '../components/TranscriptionSettings';
 import { transcribeWithGemini, type TranscriptionLine } from '../utils/geminiTranscription';
 import { useTranscriptionHistory } from '../hooks/useTranscriptionHistory';
 import { useSettings } from '../contexts/SettingsContext';
@@ -197,7 +199,7 @@ const TranscribePage = () => {
                   <div className="flex items-center gap-3">
                     <div className="flex items-center gap-2">
                       <Clock className="h-4 w-4 text-primary" />
-                      <span className="text-sm font-medium">Daily Usage</span>
+                      <span className="text-sm font-medium text-foreground">Daily Usage</span>
                     </div>
                     <Badge 
                       variant={remainingTranscriptions > 3 ? "default" : remainingTranscriptions > 0 ? "secondary" : "destructive"}
@@ -244,13 +246,18 @@ const TranscribePage = () => {
 
             <Card className="border-secondary/20 shadow-lg bg-card backdrop-blur">
               <CardHeader className="pb-3 sm:pb-4">
-                <CardTitle className="text-secondary text-base sm:text-lg">Configuration</CardTitle>
+                <CardTitle className="flex items-center gap-2 text-secondary text-base sm:text-lg">
+                  <Settings className="h-4 w-4 sm:h-5 sm:w-5" />
+                  Configuration
+                </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
                   <label className="text-sm font-medium text-foreground mb-2 block">Language</label>
                   <LanguageSelector language={language} setLanguage={setLanguage} />
                 </div>
+                <Separator className="my-4" />
+                <TranscriptionSettings />
               </CardContent>
             </Card>
 
@@ -340,7 +347,7 @@ const TranscribePage = () => {
                       variant="outline"
                       size="sm"
                       onClick={exportTranscription}
-                      className="border-secondary text-secondary hover:bg-secondary/10 text-xs sm:text-sm"
+                      className="border-foreground/20 text-foreground hover:bg-muted text-xs sm:text-sm font-semibold"
                     >
                       <Download className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                       Export

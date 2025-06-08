@@ -183,7 +183,7 @@ const TranscriptionResult: React.FC<TranscriptionResultProps> = ({
             <Button
               variant="outline"
               size="sm"
-              className="text-xs flex items-center gap-1 text-primary hover:bg-primary/10 border-primary/20 h-8"
+              className="text-xs flex items-center gap-1 text-foreground hover:bg-muted border-foreground/20 h-8 font-semibold"
               onClick={copyToClipboard}
             >
               {copied ? (
@@ -216,7 +216,9 @@ const TranscriptionResult: React.FC<TranscriptionResultProps> = ({
                         isActive={isActive}
                         currentTime={currentTime}
                         seekToTimestamp={seekToTimestamp}
-                        isPlaying={isPlaying}
+                        isPlaying={isActive && isPlaying}
+                        globalIsPlaying={isPlaying}
+                        onGlobalPlayPause={onPlayPause}
                       />
                     </div>
                   );

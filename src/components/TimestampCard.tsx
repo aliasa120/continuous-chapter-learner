@@ -1,7 +1,7 @@
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Play, Pause, User, Award, Clock, BookOpen, Lightbulb, Loader2 } from 'lucide-react';
+import { Play, Pause, Square, User, Award, Clock, BookOpen, Lightbulb, Loader2, RotateCcw } from 'lucide-react';
 import { useSettings } from '../contexts/SettingsContext';
 import { useAIAnalysis } from '../hooks/useAIAnalysis';
 import { useToast } from '@/hooks/use-toast';
@@ -15,6 +15,8 @@ interface TimestampCardProps {
   currentTime: number;
   seekToTimestamp: (seconds: number) => void;
   isPlaying: boolean;
+  globalIsPlaying: boolean;
+  onGlobalPlayPause: () => void;
 }
 
 const TimestampCard: React.FC<TimestampCardProps> = ({
@@ -23,16 +25,94 @@ const TimestampCard: React.FC<TimestampCardProps> = ({
   isActive,
   currentTime,
   seekToTimestamp,
-  isPlaying
+  isPlaying,
+  globalIsPlaying,
+  onGlobalPlayPause
 }) => {
   const [showSummary, setShowSummary] = useState(false);
   const [showExplanation, setShowExplanation] = useState(false);
   const [summary, setSummary] = useState<string>('');
   const [explanation, setExplanation] = useState<string>('');
   const [actions, setActions] = useState<string[]>([]);
+  const [isSegmentPlaying, setIsSegmentPlaying] = useState(false);
+  const [segmentProgress, setSegmentProgress] = useState(0);
   const { generateAnalysis, isAnalyzing } = useAIAnalysis();
-  const { showConfidence } = useSettings();
+  const { showConfidence, timestampPlayerMode } = useSettings();
   const { toast } = useToast();
+  const segmentTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const progressTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    if (isSegmentPlaying && timestampPlayerMode === 'segment') {
+      // Update progress
+      progressTimerRef.current = setInterval(() => {
+        const elapsed = currentTime - line.startTime;
+        const duration = line.endTime - line.startTime;
+        const progress = Math.min((elapsed / duration) * 100, 100);
+        setSegmentProgress(progress);
+        
+        if (currentTime >= line.endTime) {
+          handleSegmentStop();
+        }
+      }, 100);
+    }
+    
+    return () => {
+      if (progressTimerRef.current) {
+        clearInterval(progressTimerRef.current);
+      }
+    };
+  }, [isSegmentPlaying, currentTime, line.startTime, line.endTime, timestampPlayerMode]);
+
+  const handleSegmentPlay = () => {
+    if (timestampPlayerMode === 'segment') {
+      // Stop global player
+      if (globalIsPlaying) {
+        onGlobalPlayPause();
+      }
+      
+      // Start segment playback
+      seekToTimestamp(line.startTime);
+      setIsSegmentPlaying(true);
+      setSegmentProgress(0);
+      
+      // Set timer to stop at segment end
+      const duration = (line.endTime - line.startTime) * 1000;
+      segmentTimerRef.current = setTimeout(() => {
+        handleSegmentStop();
+      }, duration);
+      
+    } else {
+      // Regular behavior - seek and play
+      seekToTimestamp(line.startTime);
+      if (!globalIsPlaying) {
+        onGlobalPlayPause();
+      }
+    }
+  };
+
+  const handleSegmentStop = () => {
+    setIsSegmentPlaying(false);
+    setSegmentProgress(0);
+    if (segmentTimerRef.current) {
+      clearTimeout(segmentTimerRef.current);
+      segmentTimerRef.current = null;
+    }
+    if (progressTimerRef.current) {
+      clearInterval(progressTimerRef.current);
+      progressTimerRef.current = null;
+    }
+    
+    if (timestampPlayerMode === 'loop') {
+      // Restart the segment
+      setTimeout(() => handleSegmentPlay(), 500);
+    }
+  };
+
+  const handleSegmentRestart = () => {
+    seekToTimestamp(line.startTime);
+    setSegmentProgress(0);
+  };
 
   const handleSummaryClick = async () => {
     if (!summary) {
@@ -74,15 +154,17 @@ const TimestampCard: React.FC<TimestampCardProps> = ({
 
   const getConfidenceColor = (confidence?: number) => {
     if (!confidence) return 'text-muted-foreground';
-    if (confidence >= 95) return 'text-success';
-    if (confidence >= 85) return 'text-warning';
-    return 'text-destructive';
+    if (confidence >= 95) return 'text-green-500';
+    if (confidence >= 85) return 'text-yellow-500';
+    return 'text-red-500';
   };
+
+  const isCurrentlyActive = isActive || isSegmentPlaying;
 
   return (
     <div 
       className={`rounded-xl border p-4 transition-all duration-300 ${
-        isActive 
+        isCurrentlyActive 
           ? 'border-primary shadow-lg bg-primary/5 ring-2 ring-primary/20 transform scale-[1.02]' 
           : 'border-border hover:border-primary/30 bg-card hover:shadow-md'
       }`}
@@ -109,18 +191,43 @@ const TimestampCard: React.FC<TimestampCardProps> = ({
             )}
           </div>
           <div className="flex items-center gap-1">
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className={`h-8 w-8 p-0 rounded-full transition-all ${
-                isActive 
-                  ? 'text-primary border-primary bg-primary/10 shadow-sm' 
-                  : 'hover:text-primary text-muted-foreground border-border'
-              }`}
-              onClick={() => seekToTimestamp(line.startTime)}
-            >
-              {isActive && isPlaying ? <Pause className="h-3 w-3" /> : <Play className="h-3 w-3" />}
-            </Button>
+            {/* Segment Player Controls */}
+            <div className="flex items-center gap-1">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className={`h-8 w-8 p-0 rounded-full transition-all ${
+                  isCurrentlyActive 
+                    ? 'text-primary border-primary bg-primary/10 shadow-sm' 
+                    : 'hover:text-primary text-muted-foreground border-border'
+                }`}
+                onClick={handleSegmentPlay}
+              >
+                {isSegmentPlaying ? <Pause className="h-3 w-3" /> : <Play className="h-3 w-3" />}
+              </Button>
+              
+              {timestampPlayerMode === 'segment' && isSegmentPlaying && (
+                <>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="h-8 w-8 p-0 rounded-full hover:text-secondary text-muted-foreground border-border"
+                    onClick={handleSegmentStop}
+                  >
+                    <Square className="h-3 w-3" />
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="h-8 w-8 p-0 rounded-full hover:text-accent text-muted-foreground border-border"
+                    onClick={handleSegmentRestart}
+                  >
+                    <RotateCcw className="h-3 w-3" />
+                  </Button>
+                </>
+              )}
+            </div>
+            
             <Button
               variant="ghost"
               size="sm"
@@ -151,7 +258,7 @@ const TimestampCard: React.FC<TimestampCardProps> = ({
         </div>
         
         {/* Text Content with Word Highlighting */}
-        <div className={`mb-3 ${isActive ? 'font-medium text-primary' : 'text-foreground'}`}>
+        <div className={`mb-3 ${isCurrentlyActive ? 'font-medium text-primary' : 'text-foreground'}`}>
           <WordHighlight
             text={line.text}
             currentTime={currentTime}
@@ -188,14 +295,14 @@ const TimestampCard: React.FC<TimestampCardProps> = ({
 
         {/* Actions */}
         {(showSummary || showExplanation) && actions.length > 0 && (
-          <div className="p-3 bg-success/5 rounded-lg border border-success/20">
-            <h5 className="text-sm font-medium text-success mb-2">
+          <div className="mb-3 p-3 bg-green-500/5 rounded-lg border border-green-500/20">
+            <h5 className="text-sm font-medium text-green-500 mb-2">
               Actions
             </h5>
             <ul className="space-y-1">
               {actions.slice(0, 3).map((action, index) => (
                 <li key={index} className="text-xs text-foreground flex items-start">
-                  <span className="text-success mr-2 mt-0.5">•</span>
+                  <span className="text-green-500 mr-2 mt-0.5">•</span>
                   <span>{action}</span>
                 </li>
               ))}
@@ -203,13 +310,13 @@ const TimestampCard: React.FC<TimestampCardProps> = ({
           </div>
         )}
         
-        {/* Progress bar for active line */}
-        {isActive && (
+        {/* Progress bar for active line or segment playback */}
+        {(isActive || isSegmentPlaying) && (
           <div className="mt-3 bg-primary/20 rounded-full h-2 overflow-hidden">
             <div 
               className="bg-primary h-full transition-all duration-300 rounded-full"
               style={{
-                width: `${Math.min(100, ((currentTime - line.startTime) / (line.endTime - line.startTime)) * 100)}%`
+                width: `${isSegmentPlaying ? segmentProgress : Math.min(100, ((currentTime - line.startTime) / (line.endTime - line.startTime)) * 100)}%`
               }}
             />
           </div>

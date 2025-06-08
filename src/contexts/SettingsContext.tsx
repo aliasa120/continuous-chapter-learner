@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useEffect, useState } from 'react';
 
 interface SettingsContextType {
@@ -14,6 +13,14 @@ interface SettingsContextType {
   setNotifications: (value: boolean) => void;
   saveTranscripts: boolean;
   setSaveTranscripts: (value: boolean) => void;
+  wordHighlightColor: string;
+  setWordHighlightColor: (value: string) => void;
+  wordHighlightOpacity: number;
+  setWordHighlightOpacity: (value: number) => void;
+  wordHighlightAnimation: string;
+  setWordHighlightAnimation: (value: string) => void;
+  timestampPlayerMode: string;
+  setTimestampPlayerMode: (value: string) => void;
 }
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
@@ -57,6 +64,26 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     return saved ? JSON.parse(saved) : true;
   });
 
+  const [wordHighlightColor, setWordHighlightColor] = useState(() => {
+    const saved = localStorage.getItem('wordHighlightColor');
+    return saved || 'primary';
+  });
+
+  const [wordHighlightOpacity, setWordHighlightOpacity] = useState(() => {
+    const saved = localStorage.getItem('wordHighlightOpacity');
+    return saved ? parseInt(saved) : 80;
+  });
+
+  const [wordHighlightAnimation, setWordHighlightAnimation] = useState(() => {
+    const saved = localStorage.getItem('wordHighlightAnimation');
+    return saved || 'pulse';
+  });
+
+  const [timestampPlayerMode, setTimestampPlayerMode] = useState(() => {
+    const saved = localStorage.getItem('timestampPlayerMode');
+    return saved || 'segment';
+  });
+
   // Save settings to localStorage whenever they change
   useEffect(() => {
     localStorage.setItem('autoPlay', JSON.stringify(autoPlay));
@@ -82,6 +109,22 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     localStorage.setItem('saveTranscripts', JSON.stringify(saveTranscripts));
   }, [saveTranscripts]);
 
+  useEffect(() => {
+    localStorage.setItem('wordHighlightColor', wordHighlightColor);
+  }, [wordHighlightColor]);
+
+  useEffect(() => {
+    localStorage.setItem('wordHighlightOpacity', wordHighlightOpacity.toString());
+  }, [wordHighlightOpacity]);
+
+  useEffect(() => {
+    localStorage.setItem('wordHighlightAnimation', wordHighlightAnimation);
+  }, [wordHighlightAnimation]);
+
+  useEffect(() => {
+    localStorage.setItem('timestampPlayerMode', timestampPlayerMode);
+  }, [timestampPlayerMode]);
+
   return (
     <SettingsContext.Provider value={{
       autoPlay,
@@ -95,7 +138,15 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       notifications,
       setNotifications,
       saveTranscripts,
-      setSaveTranscripts
+      setSaveTranscripts,
+      wordHighlightColor,
+      setWordHighlightColor,
+      wordHighlightOpacity,
+      setWordHighlightOpacity,
+      wordHighlightAnimation,
+      setWordHighlightAnimation,
+      timestampPlayerMode,
+      setTimestampPlayerMode
     }}>
       {children}
     </SettingsContext.Provider>
