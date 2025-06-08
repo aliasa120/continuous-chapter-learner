@@ -5,7 +5,7 @@ import { Switch } from '@/components/ui/switch';
 import { Slider } from '@/components/ui/slider';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Palette, Volume2, Eye } from 'lucide-react';
+import { Palette, Volume2, Eye, Zap } from 'lucide-react';
 import { useSettings } from '../contexts/SettingsContext';
 
 const TranscriptionSettings: React.FC = () => {
