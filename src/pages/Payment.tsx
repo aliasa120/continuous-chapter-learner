@@ -4,7 +4,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Check, Crown, Mail, MessageCircle, Star } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
 
 interface PricingPlan {
   id: string;
@@ -36,14 +35,15 @@ const Payment = () => {
 
   const loadPricingPlans = async () => {
     try {
-      const { data, error } = await supabase
-        .from('pricing_plans')
-        .select('*')
-        .eq('active', true)
-        .order('price', { ascending: true });
+      // Mock data - replace with actual Supabase call when database is set up
+      const mockPlans = [
+        { id: '1', name: 'Free', price: 0, daily_limit: 1, features: ['1 transcript per day', 'Basic support'], active: true },
+        { id: '2', name: 'Basic', price: 1, daily_limit: 5, features: ['5 transcripts per day', 'Email support'], active: true },
+        { id: '3', name: 'Pro', price: 2, daily_limit: 10, features: ['10 transcripts per day', 'Priority support', 'Analysis features'], active: true },
+        { id: '4', name: 'Premium', price: 3, daily_limit: 20, features: ['20 transcripts per day', 'Premium support', 'All features'], active: true }
+      ];
       
-      if (error) throw error;
-      setPlans(data || []);
+      setPlans(mockPlans);
     } catch (error) {
       console.error('Error loading pricing plans:', error);
     }
@@ -51,15 +51,14 @@ const Payment = () => {
 
   const loadContactInfo = async () => {
     try {
-      const { data, error } = await supabase
-        .from('admin_settings')
-        .select('*')
-        .eq('key', 'contact_info')
-        .single();
+      // Mock data - replace with actual Supabase call when database is set up
+      const mockContactInfo = {
+        email: 'legendgamerz9999@gmail.com',
+        whatsapp: '',
+        payment_instructions: 'Contact us for manual payment processing.'
+      };
       
-      if (data && data.value) {
-        setContactInfo(data.value);
-      }
+      setContactInfo(mockContactInfo);
     } catch (error) {
       console.error('Error loading contact info:', error);
     }
