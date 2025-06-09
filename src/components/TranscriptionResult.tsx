@@ -12,6 +12,13 @@ import TimestampCard from './TimestampCard';
 import WordHighlight from './WordHighlight';
 import type { TranscriptionLine } from '../utils/geminiTranscription';
 
+interface ActionItem {
+  text: string;
+  timestamp: string;
+  speaker?: string;
+  index: number;
+}
+
 interface TranscriptionResultProps {
   transcriptionLines: TranscriptionLine[];
   isTranscribing: boolean;
@@ -67,8 +74,8 @@ const TranscriptionResult: React.FC<TranscriptionResultProps> = ({
     return currentTime >= line.startTime && currentTime <= line.endTime;
   };
 
-  const getActionItems = () => {
-    const actions: string[] = [];
+  const getActionItems = (): ActionItem[] => {
+    const actions: ActionItem[] = [];
     const actionKeywords = [
       'action', 'task', 'do', 'will', 'should', 'need to', 'must', 'plan', 'decide',
       'next step', 'follow up', 'reminder', 'schedule', 'assign', 'complete', 'finish',
