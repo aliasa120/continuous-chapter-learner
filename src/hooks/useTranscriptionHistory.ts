@@ -2,13 +2,6 @@
 import { useState, useEffect } from 'react';
 import type { TranscriptionLine } from '../utils/geminiTranscription';
 
-export interface ActionItem {
-  text: string;
-  timestamp: string;
-  speaker?: string;
-  index: number;
-}
-
 export interface TranscriptionHistoryItem {
   id: string;
   filename: string;
@@ -17,7 +10,6 @@ export interface TranscriptionHistoryItem {
   language: string;
   transcriptionLines: TranscriptionLine[];
   createdAt: Date;
-  actions?: ActionItem[];
 }
 
 export const useTranscriptionHistory = () => {
@@ -45,15 +37,7 @@ export const useTranscriptionHistory = () => {
       createdAt: new Date()
     };
 
-    const updatedHistory = [newItem, ...history].slice(0, 50);
-    setHistory(updatedHistory);
-    localStorage.setItem('transcription-history', JSON.stringify(updatedHistory));
-  };
-
-  const updateHistoryActions = (id: string, actions: ActionItem[]) => {
-    const updatedHistory = history.map(item => 
-      item.id === id ? { ...item, actions } : item
-    );
+    const updatedHistory = [newItem, ...history].slice(0, 50); // Keep only last 50 items
     setHistory(updatedHistory);
     localStorage.setItem('transcription-history', JSON.stringify(updatedHistory));
   };
@@ -72,7 +56,6 @@ export const useTranscriptionHistory = () => {
   return {
     history,
     addToHistory,
-    updateHistoryActions,
     removeFromHistory,
     clearHistory
   };
