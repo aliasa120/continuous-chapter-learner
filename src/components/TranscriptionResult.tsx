@@ -1,23 +1,18 @@
-
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { Clipboard, ClipboardCheck, Play, Pause, Award, Grid3X3, Eye, Zap, FileText, Download, Target, CheckCircle, Wand2, Loader2 } from 'lucide-react';
+import { Clipboard, ClipboardCheck, Play, Pause, Award, Grid3X3, Eye, Target, CheckCircle, Wand2, Loader2, Download } from 'lucide-react';
 import { useSettings } from '../contexts/SettingsContext';
+import { useTranscript } from '../contexts/TranscriptContext';
+import { useTranscriptionHistory } from '../hooks/useTranscriptionHistory';
 import ExportDialog from './ExportDialog';
 import { exportTranscription } from '../utils/exportFormats';
 import TimestampCard from './TimestampCard';
 import WordHighlight from './WordHighlight';
 import type { TranscriptionLine } from '../utils/geminiTranscription';
-
-interface ActionItem {
-  text: string;
-  timestamp: string;
-  speaker?: string;
-  index: number;
-}
+import type { ActionItem } from '../hooks/useTranscriptionHistory';
 
 interface TranscriptionResultProps {
   transcriptionLines: TranscriptionLine[];
@@ -42,10 +37,11 @@ const TranscriptionResult: React.FC<TranscriptionResultProps> = ({
 }) => {
   const [copied, setCopied] = React.useState(false);
   const [showExportDialog, setShowExportDialogState] = React.useState(false);
-  const [actionItems, setActionItems] = React.useState<ActionItem[]>([]);
   const [isGeneratingActions, setIsGeneratingActions] = React.useState(false);
   const activeLineRef = React.useRef<HTMLDivElement>(null);
   const { autoScroll, showConfidence, defaultExportFormat, showExportDialog: showExportDialogSetting } = useSettings();
+  const { currentActions, setCurrentActions } = useTranscript();
+  const { updateHistoryActions, history } = useTranscriptionHistory();
 
   // RTL languages
   const rtlLanguages = ['ar', 'he', 'ur', 'fa', 'ps', 'sd'];
@@ -80,7 +76,6 @@ const TranscriptionResult: React.FC<TranscriptionResultProps> = ({
     setIsGeneratingActions(true);
     
     try {
-      const allText = transcriptionLines.map(line => line.text).join(' ');
       const actionKeywords = [
         'action', 'task', 'do', 'will', 'should', 'need to', 'must', 'plan', 'decide',
         'next step', 'follow up', 'reminder', 'schedule', 'assign', 'complete', 'finish',
@@ -112,7 +107,18 @@ const TranscriptionResult: React.FC<TranscriptionResultProps> = ({
         }
       });
       
-      setActionItems(actions.slice(0, 15));
+      const generatedActions = actions.slice(0, 15);
+      setCurrentActions(generatedActions);
+
+      // Update history if this transcript exists in history
+      const currentHistoryItem = history.find(item => 
+        item.transcriptionLines.length === transcriptionLines.length &&
+        item.transcriptionLines[0]?.text === transcriptionLines[0]?.text
+      );
+      
+      if (currentHistoryItem) {
+        updateHistoryActions(currentHistoryItem.id, generatedActions);
+      }
     } catch (error) {
       console.error('Failed to generate actions:', error);
     } finally {
@@ -179,10 +185,6 @@ const TranscriptionResult: React.FC<TranscriptionResultProps> = ({
             <div className="w-16 h-16 mx-auto border-4 rounded-full border-l-primary border-r-primary/30 border-b-primary border-t-primary/30 animate-spin mb-4"></div>
             <p className="text-foreground animate-pulse text-lg font-semibold">Enhanced AI Processing...</p>
             <p className="text-muted-foreground mt-2">Speaker identification • Confidence scoring • Precise timing</p>
-            <div className="mt-4 bg-primary/10 rounded-lg p-4 max-w-sm mx-auto">
-              <p className="text-primary font-medium">🚀 Gemini 2.5 Flash Preview</p>
-              <p className="text-xs text-primary/80 mt-1">Advanced AI transcription in progress</p>
-            </div>
           </div>
         </div>
       </div>
@@ -196,17 +198,6 @@ const TranscriptionResult: React.FC<TranscriptionResultProps> = ({
           <div className="text-6xl mb-6">🎯</div>
           <h3 className="text-xl font-semibold text-foreground mb-2">Enhanced transcription results will appear here</h3>
           <p className="text-muted-foreground mb-6">Upload an audio or video file and start enhanced AI transcription</p>
-          <div className="bg-primary/10 border border-primary/20 rounded-lg p-4">
-            <h4 className="text-primary font-medium mb-2">Features Available:</h4>
-            <div className="grid grid-cols-2 gap-2 text-xs text-primary/80">
-              <div>• Speaker Identification</div>
-              <div>• Word-level Sync</div>
-              <div>• Confidence Scoring</div>
-              <div>• Easy View Mode</div>
-              <div>• Action Detection</div>
-              <div>• AI Analysis</div>
-            </div>
-          </div>
         </div>
       </div>
     );
@@ -239,9 +230,9 @@ const TranscriptionResult: React.FC<TranscriptionResultProps> = ({
                 <Target className="h-3 w-3 sm:h-4 sm:w-4" />
                 <span className="hidden sm:inline">Actions</span>
                 <span className="sm:hidden">Act</span>
-                {actionItems.length > 0 && (
+                {currentActions.length > 0 && (
                   <Badge variant="secondary" className="ml-1 text-xs px-1.5 py-0.5">
-                    {actionItems.length}
+                    {currentActions.length}
                   </Badge>
                 )}
               </TabsTrigger>
@@ -330,11 +321,6 @@ const TranscriptionResult: React.FC<TranscriptionResultProps> = ({
             <TabsContent value="easy-view" className="h-full m-0 p-4 sm:p-6">
               <ScrollArea className="h-full">
                 <div className="space-y-6" dir={isRTL ? 'rtl' : 'ltr'}>
-                  <div className="flex items-center gap-2 mb-4">
-                    <FileText className="h-5 w-5 text-primary" />
-                    <h3 className="text-lg font-semibold text-foreground">Easy Reading View</h3>
-                  </div>
-                  
                   <div className="bg-card/50 border border-border rounded-lg p-4 sm:p-6">
                     <h4 className="text-md font-medium text-foreground mb-3">Summary</h4>
                     <div className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">
@@ -398,7 +384,7 @@ const TranscriptionResult: React.FC<TranscriptionResultProps> = ({
                     </Button>
                   </div>
                   
-                  {actionItems.length === 0 && !isGeneratingActions ? (
+                  {currentActions.length === 0 && !isGeneratingActions ? (
                     <div className="text-center py-8">
                       <div className="text-4xl mb-4">🔍</div>
                       <p className="text-muted-foreground mb-4">Click "Generate Actions" to analyze the transcript for action items.</p>
@@ -406,15 +392,14 @@ const TranscriptionResult: React.FC<TranscriptionResultProps> = ({
                     </div>
                   ) : (
                     <div className="space-y-6">
-                      {/* Action Items */}
-                      {actionItems.length > 0 && (
+                      {currentActions.length > 0 && (
                         <div className="bg-accent/10 border border-accent/20 rounded-lg p-4">
                           <h4 className="text-md font-medium text-accent mb-3 flex items-center gap-2">
                             <CheckCircle className="h-4 w-4" />
-                            Detected Action Items ({actionItems.length})
+                            Detected Action Items ({currentActions.length})
                           </h4>
                           <div className="space-y-3">
-                            {actionItems.map((action, index) => (
+                            {currentActions.map((action, index) => (
                               <div key={index} className="flex items-start gap-3 p-3 bg-background/50 rounded-lg border border-accent/10">
                                 <span className="text-accent mt-1 font-bold text-lg">•</span>
                                 <div className="flex-1">
@@ -443,64 +428,6 @@ const TranscriptionResult: React.FC<TranscriptionResultProps> = ({
                           </div>
                         </div>
                       )}
-
-                      {/* Meeting Insights */}
-                      {(meetingInsights.decisions.length > 0 || meetingInsights.commitments.length > 0) && (
-                        <div className="bg-primary/10 border border-primary/20 rounded-lg p-4">
-                          <h4 className="text-md font-medium text-primary mb-3">Meeting Insights</h4>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {meetingInsights.decisions.length > 0 && (
-                              <div>
-                                <h5 className="text-sm font-medium text-foreground mb-2">Decisions Made</h5>
-                                <ul className="space-y-1">
-                                  {meetingInsights.decisions.slice(0, 3).map((decision, index) => (
-                                    <li key={index} className="text-xs text-muted-foreground">
-                                      • {decision.substring(0, 100)}...
-                                    </li>
-                                  ))}
-                                </ul>
-                              </div>
-                            )}
-                            {meetingInsights.commitments.length > 0 && (
-                              <div>
-                                <h5 className="text-sm font-medium text-foreground mb-2">Commitments</h5>
-                                <ul className="space-y-1">
-                                  {meetingInsights.commitments.slice(0, 3).map((commitment, index) => (
-                                    <li key={index} className="text-xs text-muted-foreground">
-                                      • {commitment.substring(0, 100)}...
-                                    </li>
-                                  ))}
-                                </ul>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      )}
-                      
-                      {/* Quick Stats */}
-                      <div className="bg-secondary/10 border border-secondary/20 rounded-lg p-4">
-                        <h4 className="text-md font-medium text-secondary mb-3">Analysis Summary</h4>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                          <div>
-                            <span className="text-muted-foreground">Total segments:</span>
-                            <span className="text-foreground font-medium ml-2">{transcriptionLines.length}</span>
-                          </div>
-                          <div>
-                            <span className="text-muted-foreground">Action items:</span>
-                            <span className="text-foreground font-medium ml-2">{actionItems.length}</span>
-                          </div>
-                          <div>
-                            <span className="text-muted-foreground">Avg confidence:</span>
-                            <span className="text-foreground font-medium ml-2">{averageConfidence.toFixed(0)}%</span>
-                          </div>
-                          <div>
-                            <span className="text-muted-foreground">Speakers:</span>
-                            <span className="text-foreground font-medium ml-2">
-                              {new Set(transcriptionLines.map(l => l.speaker).filter(Boolean)).size || 1}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
                     </div>
                   )}
                 </div>
