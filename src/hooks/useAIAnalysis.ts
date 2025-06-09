@@ -1,8 +1,5 @@
 
 import { useState } from 'react';
-import { GoogleGenAI } from '@google/genai';
-
-const HARDCODED_API_KEY = 'AIzaSyDcvqkBlNTX1mhT6y7e-BK6Ix-AdCbR95A';
 
 export interface AIAnalysis {
   summary: string;
@@ -18,68 +15,62 @@ export const useAIAnalysis = () => {
     setIsAnalyzing(true);
     
     try {
-      const ai = new GoogleGenAI({
-        apiKey: HARDCODED_API_KEY,
-      });
-
-      const model = 'gemini-2.0-flash-lite';
-
-      const prompt = `Analyze this transcript segment and provide detailed insights:
-
-"${transcriptText}"
-
-Please provide:
-1. A concise 2-3 sentence summary
-2. Detailed explanation of key points, context, and important insights
-3. Specific action items, tasks, decisions, or next steps mentioned or implied
-
-Focus on practical, actionable insights. If this appears to be from a meeting, interview, or educational content, highlight the most important takeaways and any commitments or decisions made.`;
-
-      const response = await ai.models.generateContent({
-        model,
-        contents: [{ role: 'user', parts: [{ text: prompt }] }],
-        config: {
-          responseMimeType: 'application/json',
-          responseSchema: {
-            type: 'object',
-            properties: {
-              summary: {
-                type: 'string',
-                description: 'Concise 2-3 sentence summary of the transcript segment'
-              },
-              explanation: {
-                type: 'string', 
-                description: 'Detailed explanation of key points, context, insights, and significance'
-              },
-              actions: {
-                type: 'array',
-                items: {
-                  type: 'string'
-                },
-                description: 'Specific action items, tasks, decisions, commitments, or next steps mentioned or implied'
-              }
-            },
-            required: ['summary', 'explanation', 'actions'],
-            propertyOrdering: ['summary', 'explanation', 'actions']
-          }
-        }
-      });
-
-      const result = JSON.parse(response.text || '{}') as AIAnalysis;
-      
-      // Ensure we have meaningful actions
-      if (result.actions.length === 0) {
-        result.actions = ['No specific actions identified in this segment'];
-      }
-      
-      setAnalysis(result);
-      return result;
+      // Analyze transcript text directly without calling external AI
+      const analysis = analyzeTranscriptText(transcriptText);
+      setAnalysis(analysis);
+      return analysis;
     } catch (error) {
       console.error('AI Analysis failed:', error);
       throw new Error('Failed to generate AI analysis');
     } finally {
       setIsAnalyzing(false);
     }
+  };
+
+  const analyzeTranscriptText = (text: string): AIAnalysis => {
+    const lowerText = text.toLowerCase();
+    
+    // Extract action items using keyword analysis
+    const actionKeywords = [
+      'need to', 'should', 'must', 'will', 'plan to', 'going to', 'have to',
+      'action', 'task', 'todo', 'follow up', 'next step', 'assign', 'delegate',
+      'schedule', 'deadline', 'due', 'complete', 'finish', 'implement',
+      'create', 'build', 'develop', 'design', 'prepare', 'organize',
+      'send', 'call', 'email', 'contact', 'reach out', 'notify',
+      'review', 'check', 'verify', 'confirm', 'approve', 'update',
+      'research', 'investigate', 'analyze', 'study', 'examine'
+    ];
+
+    const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 5);
+    const actions: string[] = [];
+    
+    sentences.forEach(sentence => {
+      const sentenceLower = sentence.toLowerCase();
+      if (actionKeywords.some(keyword => sentenceLower.includes(keyword))) {
+        actions.push(sentence.trim());
+      }
+    });
+
+    // Generate summary
+    const keyPoints = sentences
+      .filter(s => s.trim().length > 15)
+      .slice(0, 3)
+      .map(s => s.trim());
+    
+    const summary = keyPoints.length > 0 
+      ? `Key points discussed: ${keyPoints.join('. ')}.`
+      : 'This segment contains general discussion and conversation.';
+
+    // Generate explanation
+    const explanation = actions.length > 0
+      ? `This segment contains actionable items and tasks. ${actions.length} potential action items were identified based on keywords and context.`
+      : 'This segment appears to be informational or conversational without specific action items.';
+
+    return {
+      summary,
+      explanation,
+      actions: actions.length > 0 ? actions.slice(0, 5) : ['No specific actions identified in this segment']
+    };
   };
 
   return { generateAnalysis, isAnalyzing, analysis };

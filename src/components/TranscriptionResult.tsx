@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { Clipboard, ClipboardCheck, Play, Pause, Award, Grid3X3, Eye, Zap, FileText, Download, Target, CheckCircle } from 'lucide-react';
+import { Clipboard, ClipboardCheck, Play, Pause, Award, Grid3X3, Eye, Zap, FileText, Download, Target, CheckCircle, Wand2, Loader2 } from 'lucide-react';
 import { useSettings } from '../contexts/SettingsContext';
 import ExportDialog from './ExportDialog';
 import { exportTranscription } from '../utils/exportFormats';
@@ -42,6 +42,8 @@ const TranscriptionResult: React.FC<TranscriptionResultProps> = ({
 }) => {
   const [copied, setCopied] = React.useState(false);
   const [showExportDialog, setShowExportDialogState] = React.useState(false);
+  const [actionItems, setActionItems] = React.useState<ActionItem[]>([]);
+  const [isGeneratingActions, setIsGeneratingActions] = React.useState(false);
   const activeLineRef = React.useRef<HTMLDivElement>(null);
   const { autoScroll, showConfidence, defaultExportFormat, showExportDialog: showExportDialogSetting } = useSettings();
 
@@ -74,39 +76,48 @@ const TranscriptionResult: React.FC<TranscriptionResultProps> = ({
     return currentTime >= line.startTime && currentTime <= line.endTime;
   };
 
-  const getActionItems = (): ActionItem[] => {
-    const actions: ActionItem[] = [];
-    const actionKeywords = [
-      'action', 'task', 'do', 'will', 'should', 'need to', 'must', 'plan', 'decide',
-      'next step', 'follow up', 'reminder', 'schedule', 'assign', 'complete', 'finish',
-      'implement', 'create', 'build', 'send', 'call', 'email', 'meet', 'discuss',
-      'review', 'approve', 'prepare', 'research', 'investigate', 'analyze', 'update',
-      'deadline', 'due', 'priority', 'urgent', 'important', 'commit', 'promise',
-      'agree', 'decision', 'resolve', 'fix', 'solve', 'address', 'handle'
-    ];
-
-    transcriptionLines.forEach((line, index) => {
-      const text = line.text.toLowerCase();
-      const hasActionKeyword = actionKeywords.some(keyword => text.includes(keyword));
-      
-      if (hasActionKeyword) {
-        // Extract the sentence or context around the action keyword
-        const sentences = line.text.split(/[.!?]+/).filter(s => s.trim().length > 10);
-        sentences.forEach(sentence => {
-          const sentenceLower = sentence.toLowerCase();
-          if (actionKeywords.some(keyword => sentenceLower.includes(keyword))) {
-            actions.push({
-              text: sentence.trim(),
-              timestamp: line.timestamp,
-              speaker: line.speaker,
-              index: index
-            });
-          }
-        });
-      }
-    });
+  const generateActions = async () => {
+    setIsGeneratingActions(true);
     
-    return actions.slice(0, 15); // Limit to 15 most relevant actions
+    try {
+      const allText = transcriptionLines.map(line => line.text).join(' ');
+      const actionKeywords = [
+        'action', 'task', 'do', 'will', 'should', 'need to', 'must', 'plan', 'decide',
+        'next step', 'follow up', 'reminder', 'schedule', 'assign', 'complete', 'finish',
+        'implement', 'create', 'build', 'send', 'call', 'email', 'meet', 'discuss',
+        'review', 'approve', 'prepare', 'research', 'investigate', 'analyze', 'update',
+        'deadline', 'due', 'priority', 'urgent', 'important', 'commit', 'promise',
+        'agree', 'decision', 'resolve', 'fix', 'solve', 'address', 'handle'
+      ];
+
+      const actions: ActionItem[] = [];
+      
+      transcriptionLines.forEach((line, index) => {
+        const text = line.text.toLowerCase();
+        const hasActionKeyword = actionKeywords.some(keyword => text.includes(keyword));
+        
+        if (hasActionKeyword) {
+          const sentences = line.text.split(/[.!?]+/).filter(s => s.trim().length > 10);
+          sentences.forEach(sentence => {
+            const sentenceLower = sentence.toLowerCase();
+            if (actionKeywords.some(keyword => sentenceLower.includes(keyword))) {
+              actions.push({
+                text: sentence.trim(),
+                timestamp: line.timestamp,
+                speaker: line.speaker,
+                index: index
+              });
+            }
+          });
+        }
+      });
+      
+      setActionItems(actions.slice(0, 15));
+    } catch (error) {
+      console.error('Failed to generate actions:', error);
+    } finally {
+      setIsGeneratingActions(false);
+    }
   };
 
   const getMeetingInsights = () => {
@@ -202,7 +213,6 @@ const TranscriptionResult: React.FC<TranscriptionResultProps> = ({
   }
 
   const averageConfidence = transcriptionLines.reduce((sum, line) => sum + (line.confidence || 0), 0) / transcriptionLines.length;
-  const actionItems = getActionItems();
   const meetingInsights = getMeetingInsights();
   const summary = generateSummary();
 
@@ -363,54 +373,76 @@ const TranscriptionResult: React.FC<TranscriptionResultProps> = ({
             <TabsContent value="actions" className="h-full m-0 p-4 sm:p-6">
               <ScrollArea className="h-full">
                 <div className="space-y-6">
-                  <div className="flex items-center gap-2 mb-4">
-                    <Target className="h-5 w-5 text-accent" />
-                    <h3 className="text-lg font-semibold text-foreground">Smart Action Analysis</h3>
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                      <Target className="h-5 w-5 text-accent" />
+                      <h3 className="text-lg font-semibold text-foreground">Smart Action Analysis</h3>
+                    </div>
+                    <Button
+                      onClick={generateActions}
+                      disabled={isGeneratingActions}
+                      className="bg-accent hover:bg-accent/90 text-accent-foreground"
+                      size="sm"
+                    >
+                      {isGeneratingActions ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Analyzing...
+                        </>
+                      ) : (
+                        <>
+                          <Wand2 className="mr-2 h-4 w-4" />
+                          Generate Actions
+                        </>
+                      )}
+                    </Button>
                   </div>
                   
-                  {actionItems.length === 0 ? (
+                  {actionItems.length === 0 && !isGeneratingActions ? (
                     <div className="text-center py-8">
                       <div className="text-4xl mb-4">🔍</div>
-                      <p className="text-muted-foreground">No specific action items detected in this transcription.</p>
-                      <p className="text-sm text-muted-foreground mt-2">The AI will analyze content for tasks, decisions, commitments, and next steps.</p>
+                      <p className="text-muted-foreground mb-4">Click "Generate Actions" to analyze the transcript for action items.</p>
+                      <p className="text-sm text-muted-foreground">The AI will analyze the transcript content for tasks, decisions, commitments, and next steps.</p>
                     </div>
                   ) : (
                     <div className="space-y-6">
                       {/* Action Items */}
-                      <div className="bg-accent/10 border border-accent/20 rounded-lg p-4">
-                        <h4 className="text-md font-medium text-accent mb-3 flex items-center gap-2">
-                          <CheckCircle className="h-4 w-4" />
-                          Detected Action Items ({actionItems.length})
-                        </h4>
-                        <div className="space-y-3">
-                          {actionItems.map((action, index) => (
-                            <div key={index} className="flex items-start gap-3 p-3 bg-background/50 rounded-lg border border-accent/10">
-                              <span className="text-accent mt-1 font-bold text-lg">•</span>
-                              <div className="flex-1">
-                                <p className="text-sm text-foreground leading-relaxed">{action.text}</p>
-                                <div className="flex items-center gap-2 mt-2">
-                                  <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded">
-                                    {action.timestamp}
-                                  </span>
-                                  {action.speaker && (
-                                    <span className="text-xs text-accent bg-accent/10 px-2 py-1 rounded">
-                                      {action.speaker}
+                      {actionItems.length > 0 && (
+                        <div className="bg-accent/10 border border-accent/20 rounded-lg p-4">
+                          <h4 className="text-md font-medium text-accent mb-3 flex items-center gap-2">
+                            <CheckCircle className="h-4 w-4" />
+                            Detected Action Items ({actionItems.length})
+                          </h4>
+                          <div className="space-y-3">
+                            {actionItems.map((action, index) => (
+                              <div key={index} className="flex items-start gap-3 p-3 bg-background/50 rounded-lg border border-accent/10">
+                                <span className="text-accent mt-1 font-bold text-lg">•</span>
+                                <div className="flex-1">
+                                  <p className="text-sm text-foreground leading-relaxed">{action.text}</p>
+                                  <div className="flex items-center gap-2 mt-2">
+                                    <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded">
+                                      {action.timestamp}
                                     </span>
-                                  )}
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => seekToTimestamp(transcriptionLines[action.index].startTime)}
-                                    className="h-6 text-xs text-primary hover:bg-primary/10"
-                                  >
-                                    Jump to
-                                  </Button>
+                                    {action.speaker && (
+                                      <span className="text-xs text-accent bg-accent/10 px-2 py-1 rounded">
+                                        {action.speaker}
+                                      </span>
+                                    )}
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => seekToTimestamp(transcriptionLines[action.index].startTime)}
+                                      className="h-6 text-xs text-primary hover:bg-primary/10"
+                                    >
+                                      Jump to
+                                    </Button>
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                          ))}
+                            ))}
+                          </div>
                         </div>
-                      </div>
+                      )}
 
                       {/* Meeting Insights */}
                       {(meetingInsights.decisions.length > 0 || meetingInsights.commitments.length > 0) && (

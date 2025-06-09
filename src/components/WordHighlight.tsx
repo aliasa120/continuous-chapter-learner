@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useSettings } from '../contexts/SettingsContext';
 
@@ -52,8 +53,6 @@ const WordHighlight: React.FC<WordHighlightProps> = ({
   };
   
   const getWordHighlight = (wordIndex: number) => {
-    // For RTL languages, we need to calculate timing from right to left visually
-    // but keep the logical word order for timing calculations
     const wordStartTime = startTime + (wordIndex * timePerWord);
     const wordEndTime = wordStartTime + timePerWord;
     
@@ -61,13 +60,13 @@ const WordHighlight: React.FC<WordHighlightProps> = ({
     if (currentTime >= wordStartTime && currentTime <= wordEndTime) {
       const colorClass = getColorClass(wordHighlightColor);
       const animationClass = getAnimationClass(wordHighlightAnimation);
-      return `${colorClass} font-bold px-2 py-1 rounded-md shadow-sm transform transition-all duration-200 ${animationClass}`;
+      return `${colorClass} font-bold px-1 py-0.5 rounded-md shadow-sm transform transition-all duration-200 ${animationClass}`;
     }
     
     // Already spoken words
     if (currentTime > wordEndTime) {
       const bgOpacity = Math.floor(wordHighlightOpacity / 2);
-      return `text-${wordHighlightColor}/80 font-medium bg-${wordHighlightColor}/${bgOpacity} px-1 py-0.5 rounded transition-all duration-300`;
+      return `text-${wordHighlightColor}/80 font-medium bg-${wordHighlightColor}/${bgOpacity} px-0.5 py-0.5 rounded transition-all duration-300`;
     }
     
     // Not yet spoken words
@@ -99,9 +98,11 @@ const WordHighlight: React.FC<WordHighlightProps> = ({
         return (
           <span
             key={index}
-            className={`relative inline-block transition-all duration-300 ease-in-out ${isRTL ? 'ml-1' : 'mr-1'} ${getWordHighlight(index)}`}
+            className={`relative inline transition-all duration-300 ease-in-out ${getWordHighlight(index)}`}
             style={{
-              transitionDelay: `${index * 50}ms`
+              transitionDelay: `${index * 50}ms`,
+              marginRight: isRTL ? '0' : '0.25rem',
+              marginLeft: isRTL ? '0.25rem' : '0'
             }}
           >
             {word}
