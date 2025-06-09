@@ -10,7 +10,11 @@ interface FileUploadProps {
 }
 
 const FileUpload: React.FC<FileUploadProps> = ({ file, setFile }) => {
-  const { maxFileSizeMB, maxDurationMinutes } = useSettings();
+  const { maxFileSize, maxDuration } = useSettings();
+  
+  // Convert settings to the units we need for display
+  const maxFileSizeMB = maxFileSize;
+  const maxDurationMinutes = Math.round(maxDuration / 60);
   
   const onDrop = useCallback((acceptedFiles: File[]) => {
     if (acceptedFiles.length > 0) {
@@ -24,7 +28,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ file, setFile }) => {
       'audio/*': ['.mp3', '.wav', '.m4a', '.aac', '.ogg', '.flac', '.aiff'],
       'video/*': ['.mp4', '.mov', '.avi', '.wmv', '.mpeg', '.mpg', '.webm', '.3gpp', '.flv']
     },
-    maxSize: maxFileSizeMB * 1024 * 1024, // Convert MB to bytes
+    maxSize: maxFileSize * 1024 * 1024, // Convert MB to bytes
     multiple: false
   });
 
