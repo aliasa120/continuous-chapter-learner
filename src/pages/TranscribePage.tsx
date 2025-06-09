@@ -157,26 +157,6 @@ const TranscribePage = () => {
     setCurrentTime(seconds);
   };
 
-  const exportTranscription = () => {
-    if (transcriptionLines.length === 0) return;
-    
-    const text = transcriptionLines.map(line => line.text).join(' ');
-    const blob = new Blob([text], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${file?.name || 'transcription'}.txt`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    
-    toast({
-      title: "Export successful",
-      description: "Transcription has been downloaded as a text file.",
-    });
-  };
-
   const remainingTranscriptions = DAILY_LIMIT - dailyCount;
 
   return (
@@ -224,6 +204,8 @@ const TranscribePage = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
           {/* Upload and Controls */}
           <div className="lg:col-span-1 space-y-4 sm:space-y-6">
+            {/* ... keep existing code (upload and configuration cards) */}
+
             <Card className="border-primary/20 shadow-lg bg-card backdrop-blur">
               <CardHeader className="pb-3 sm:pb-4">
                 <CardTitle className="flex items-center gap-2 text-primary text-base sm:text-lg">
@@ -338,17 +320,6 @@ const TranscribePage = () => {
                       </Badge>
                     )}
                   </CardTitle>
-                  {transcriptionLines.length > 0 && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={exportTranscription}
-                      className="border-foreground/20 text-foreground hover:bg-muted text-xs sm:text-sm font-semibold"
-                    >
-                      <Download className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                      Export
-                    </Button>
-                  )}
                 </div>
               </CardHeader>
               <CardContent className="p-0">
@@ -369,6 +340,8 @@ const TranscribePage = () => {
                     seekToTimestamp={seekToTimestamp}
                     isPlaying={isPlaying}
                     onPlayPause={handlePlayPause}
+                    language={language}
+                    filename={file?.name.replace(/\.[^/.]+$/, '') || 'transcription'}
                   />
                 )}
               </CardContent>

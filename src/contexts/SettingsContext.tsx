@@ -21,6 +21,14 @@ interface SettingsContextType {
   setWordHighlightAnimation: (value: string) => void;
   timestampPlayerMode: string;
   setTimestampPlayerMode: (value: string) => void;
+  defaultExportFormat: string;
+  setDefaultExportFormat: (value: string) => void;
+  showExportDialog: boolean;
+  setShowExportDialog: (value: boolean) => void;
+  maxFileSize: number;
+  setMaxFileSize: (value: number) => void;
+  maxDuration: number;
+  setMaxDuration: (value: number) => void;
 }
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
@@ -84,6 +92,26 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     return saved || 'segment';
   });
 
+  const [defaultExportFormat, setDefaultExportFormat] = useState(() => {
+    const saved = localStorage.getItem('defaultExportFormat');
+    return saved || 'txt';
+  });
+
+  const [showExportDialog, setShowExportDialog] = useState(() => {
+    const saved = localStorage.getItem('showExportDialog');
+    return saved ? JSON.parse(saved) : true;
+  });
+
+  const [maxFileSize, setMaxFileSize] = useState(() => {
+    const saved = localStorage.getItem('maxFileSize');
+    return saved ? parseInt(saved) : 2048; // 2GB in MB
+  });
+
+  const [maxDuration, setMaxDuration] = useState(() => {
+    const saved = localStorage.getItem('maxDuration');
+    return saved ? parseInt(saved) : 3600; // 1 hour in seconds
+  });
+
   // Save settings to localStorage whenever they change
   useEffect(() => {
     localStorage.setItem('autoPlay', JSON.stringify(autoPlay));
@@ -125,6 +153,22 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     localStorage.setItem('timestampPlayerMode', timestampPlayerMode);
   }, [timestampPlayerMode]);
 
+  useEffect(() => {
+    localStorage.setItem('defaultExportFormat', defaultExportFormat);
+  }, [defaultExportFormat]);
+
+  useEffect(() => {
+    localStorage.setItem('showExportDialog', JSON.stringify(showExportDialog));
+  }, [showExportDialog]);
+
+  useEffect(() => {
+    localStorage.setItem('maxFileSize', maxFileSize.toString());
+  }, [maxFileSize]);
+
+  useEffect(() => {
+    localStorage.setItem('maxDuration', maxDuration.toString());
+  }, [maxDuration]);
+
   return (
     <SettingsContext.Provider value={{
       autoPlay,
@@ -146,7 +190,15 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       wordHighlightAnimation,
       setWordHighlightAnimation,
       timestampPlayerMode,
-      setTimestampPlayerMode
+      setTimestampPlayerMode,
+      defaultExportFormat,
+      setDefaultExportFormat,
+      showExportDialog,
+      setShowExportDialog,
+      maxFileSize,
+      setMaxFileSize,
+      maxDuration,
+      setMaxDuration
     }}>
       {children}
     </SettingsContext.Provider>

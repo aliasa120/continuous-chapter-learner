@@ -1,186 +1,180 @@
-
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Separator } from '@/components/ui/separator';
-import { Slider } from '@/components/ui/slider';
 import { Label } from '@/components/ui/label';
-import { Settings as SettingsIcon, Volume2, Palette, Globe, Shield, FileText, Download, Trash2, Moon, Sun, History, Eye, Award, Zap } from 'lucide-react';
-import { useTheme } from '../contexts/ThemeContext';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Slider } from '@/components/ui/slider';
+import { Input } from '@/components/ui/input';
+import { Separator } from '@/components/ui/separator';
+import { Badge } from '@/components/ui/badge';
+import { 
+  Settings as SettingsIcon, 
+  Play, 
+  Eye, 
+  Palette, 
+  Languages, 
+  Database, 
+  Zap,
+  Download,
+  HardDrive,
+  Clock
+} from 'lucide-react';
 import { useSettings } from '../contexts/SettingsContext';
-import { useTranscriptionHistory } from '../hooks/useTranscriptionHistory';
-import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
+import { exportFormats } from '../utils/exportFormats';
+import LanguageSelector from '../components/LanguageSelector';
 
 const Settings = () => {
-  const { theme, toggleTheme } = useTheme();
-  const { history, clearHistory } = useTranscriptionHistory();
   const {
-    autoPlay,
-    setAutoPlay,
-    autoScroll,
-    setAutoScroll,
-    showConfidence,
-    setShowConfidence,
-    defaultLanguage,
-    setDefaultLanguage,
-    notifications,
-    setNotifications,
-    saveTranscripts,
-    setSaveTranscripts,
-    wordHighlightColor,
-    setWordHighlightColor,
-    wordHighlightOpacity,
-    setWordHighlightOpacity,
-    wordHighlightAnimation,
-    setWordHighlightAnimation,
-    timestampPlayerMode,
-    setTimestampPlayerMode
+    autoPlay, setAutoPlay,
+    autoScroll, setAutoScroll,
+    showConfidence, setShowConfidence,
+    defaultLanguage, setDefaultLanguage,
+    notifications, setNotifications,
+    saveTranscripts, setSaveTranscripts,
+    wordHighlightColor, setWordHighlightColor,
+    wordHighlightOpacity, setWordHighlightOpacity,
+    wordHighlightAnimation, setWordHighlightAnimation,
+    timestampPlayerMode, setTimestampPlayerMode,
+    defaultExportFormat, setDefaultExportFormat,
+    showExportDialog, setShowExportDialog,
+    maxFileSize, setMaxFileSize,
+    maxDuration, setMaxDuration
   } = useSettings();
-  const navigate = useNavigate();
+  
   const { toast } = useToast();
 
-  const handleClearHistory = () => {
-    clearHistory();
-    toast({
-      title: "History cleared",
-      description: "All transcription history has been removed.",
-    });
-  };
-
-  const handleExportData = () => {
-    const data = {
-      history,
-      settings: {
-        theme,
-        autoPlay,
-        defaultLanguage,
-        notifications,
-        saveTranscripts,
-        autoScroll,
-        showConfidence,
-        wordHighlightColor,
-        wordHighlightOpacity,
-        wordHighlightAnimation,
-        timestampPlayerMode
-      },
-      exportDate: new Date().toISOString()
-    };
-    
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `transcription_data_${new Date().toISOString().split('T')[0]}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+  const resetSettings = () => {
+    setAutoPlay(false);
+    setAutoScroll(true);
+    setShowConfidence(true);
+    setDefaultLanguage('en');
+    setNotifications(true);
+    setSaveTranscripts(true);
+    setWordHighlightColor('primary');
+    setWordHighlightOpacity(80);
+    setWordHighlightAnimation('pulse');
+    setTimestampPlayerMode('segment');
+    setDefaultExportFormat('txt');
+    setShowExportDialog(true);
+    setMaxFileSize(2048);
+    setMaxDuration(3600);
     
     toast({
-      title: "Data exported",
-      description: "Your data has been downloaded successfully.",
+      title: "Settings Reset",
+      description: "All settings have been restored to their default values.",
     });
   };
 
   return (
-    <div className="container mx-auto px-4 py-6">
-      <div className="max-w-4xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-3xl md:text-4xl font-bold mb-2 premium-gradient bg-clip-text text-transparent">
+    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5 py-4 sm:py-6">
+      <div className="container mx-auto px-3 sm:px-4 max-w-4xl">
+        <div className="mb-6 sm:mb-8">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-2 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent flex items-center gap-3">
+            <SettingsIcon className="h-8 w-8 text-primary" />
             Settings
           </h1>
-          <p className="text-muted-foreground">Customize your transcription experience</p>
+          <p className="text-muted-foreground text-sm sm:text-base">
+            Customize your transcription experience and preferences
+          </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid gap-6">
           {/* Playback Settings */}
-          <Card className="border-primary/10 bg-primary/5">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm flex items-center gap-2 text-primary">
-                <Volume2 className="h-4 w-4" />
-                Playback
+          <Card className="border-primary/20 shadow-lg bg-card backdrop-blur">
+            <CardHeader className="pb-4">
+              <CardTitle className="flex items-center gap-2 text-primary">
+                <Play className="h-5 w-5" />
+                Playback Settings
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
+            <CardContent className="space-y-6">
               <div className="flex items-center justify-between">
-                <Label htmlFor="auto-play" className="text-sm text-foreground">Auto Play</Label>
+                <div className="space-y-1">
+                  <Label htmlFor="auto-play">Auto-play on timestamp click</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Automatically start playback when clicking on timestamps
+                  </p>
+                </div>
                 <Switch
                   id="auto-play"
                   checked={autoPlay}
                   onCheckedChange={setAutoPlay}
                 />
               </div>
+
+              <div className="space-y-3">
+                <Label>Timestamp Player Mode</Label>
+                <Select value={timestampPlayerMode} onValueChange={setTimestampPlayerMode}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="segment">Play Segment Only</SelectItem>
+                    <SelectItem value="continuous">Play from Timestamp</SelectItem>
+                    <SelectItem value="loop">Loop Segment</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Choose how timestamp clicks behave in the player
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Display Settings */}
+          <Card className="border-secondary/20 shadow-lg bg-card backdrop-blur">
+            <CardHeader className="pb-4">
+              <CardTitle className="flex items-center gap-2 text-secondary">
+                <Eye className="h-5 w-5" />
+                Display Settings
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
               <div className="flex items-center justify-between">
-                <Label htmlFor="auto-scroll" className="text-sm text-foreground">Auto Scroll</Label>
+                <div className="space-y-1">
+                  <Label htmlFor="auto-scroll">Auto-scroll to active line</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Automatically scroll to the currently playing line
+                  </p>
+                </div>
                 <Switch
                   id="auto-scroll"
                   checked={autoScroll}
                   onCheckedChange={setAutoScroll}
                 />
               </div>
-              <div className="space-y-2">
-                <Label className="text-sm text-foreground">Timestamp Player Mode</Label>
-                <Select value={timestampPlayerMode} onValueChange={setTimestampPlayerMode}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="segment">Play Segment Only</SelectItem>
-                    <SelectItem value="continuous">Play Continuously</SelectItem>
-                    <SelectItem value="loop">Loop Segment</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </CardContent>
-          </Card>
 
-          {/* Display Settings */}
-          <Card className="border-secondary/10 bg-secondary/5">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm flex items-center gap-2 text-secondary">
-                <Eye className="h-4 w-4" />
-                Display
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
               <div className="flex items-center justify-between">
-                <Label htmlFor="show-confidence" className="text-sm text-foreground">Show Confidence</Label>
+                <div className="space-y-1">
+                  <Label htmlFor="show-confidence">Show confidence scores</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Display confidence percentages for each segment
+                  </p>
+                </div>
                 <Switch
                   id="show-confidence"
                   checked={showConfidence}
                   onCheckedChange={setShowConfidence}
                 />
               </div>
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium">Dark mode</p>
-                  <p className="text-sm text-muted-foreground">Switch between light and dark themes</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Sun className="h-4 w-4 text-yellow-500" />
-                  <Switch checked={theme === 'dark'} onCheckedChange={toggleTheme} />
-                  <Moon className="h-4 w-4 text-blue-500" />
-                </div>
-              </div>
             </CardContent>
           </Card>
 
           {/* Word Highlighting */}
-          <Card className="border-accent/10 bg-accent/5">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm flex items-center gap-2 text-accent">
-                <Palette className="h-4 w-4" />
+          <Card className="border-accent/20 shadow-lg bg-card backdrop-blur">
+            <CardHeader className="pb-4">
+              <CardTitle className="flex items-center gap-2 text-accent">
+                <Palette className="h-5 w-5" />
                 Word Highlighting
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="space-y-2">
-                <Label className="text-sm text-foreground">Highlight Color</Label>
+            <CardContent className="space-y-6">
+              <div className="space-y-3">
+                <Label>Highlight Color</Label>
                 <Select value={wordHighlightColor} onValueChange={setWordHighlightColor}>
-                  <SelectTrigger className="w-full">
+                  <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -193,9 +187,9 @@ const Settings = () => {
                   </SelectContent>
                 </Select>
               </div>
-              
-              <div className="space-y-2">
-                <Label className="text-sm text-foreground">Highlight Opacity ({wordHighlightOpacity}%)</Label>
+
+              <div className="space-y-3">
+                <Label>Highlight Opacity: {wordHighlightOpacity}%</Label>
                 <Slider
                   value={[wordHighlightOpacity]}
                   onValueChange={(value) => setWordHighlightOpacity(value[0])}
@@ -206,161 +200,196 @@ const Settings = () => {
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label className="text-sm text-foreground">Animation Style</Label>
+              <div className="space-y-3">
+                <Label>Animation Style</Label>
                 <Select value={wordHighlightAnimation} onValueChange={setWordHighlightAnimation}>
-                  <SelectTrigger className="w-full">
+                  <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="none">None</SelectItem>
                     <SelectItem value="pulse">Pulse</SelectItem>
                     <SelectItem value="glow">Glow</SelectItem>
                     <SelectItem value="bounce">Bounce</SelectItem>
                     <SelectItem value="fade">Fade</SelectItem>
                     <SelectItem value="scale">Scale</SelectItem>
-                    <SelectItem value="none">None</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Export Settings */}
+          <Card className="border-green-500/20 shadow-lg bg-card backdrop-blur">
+            <CardHeader className="pb-4">
+              <CardTitle className="flex items-center gap-2 text-green-500">
+                <Download className="h-5 w-5" />
+                Export Settings
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-3">
+                <Label>Default Export Format</Label>
+                <Select value={defaultExportFormat} onValueChange={setDefaultExportFormat}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {exportFormats.map((format) => (
+                      <SelectItem key={format.value} value={format.value}>
+                        <div>
+                          <div className="font-medium">{format.label}</div>
+                          <div className="text-xs text-muted-foreground">{format.description}</div>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <Label htmlFor="show-export-dialog">Show export format dialog</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Show format selection dialog when exporting
+                  </p>
+                </div>
+                <Switch
+                  id="show-export-dialog"
+                  checked={showExportDialog}
+                  onCheckedChange={setShowExportDialog}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* File Limits */}
+          <Card className="border-orange-500/20 shadow-lg bg-card backdrop-blur">
+            <CardHeader className="pb-4">
+              <CardTitle className="flex items-center gap-2 text-orange-500">
+                <HardDrive className="h-5 w-5" />
+                File Limits
+                <Badge variant="secondary" className="text-xs">Gemini 2.5 Flash</Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-3">
+                <Label>Maximum File Size (MB): {maxFileSize}</Label>
+                <Slider
+                  value={[maxFileSize]}
+                  onValueChange={(value) => setMaxFileSize(value[0])}
+                  max={2048}
+                  min={50}
+                  step={50}
+                  className="w-full"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Gemini 2.5 Flash supports up to 2GB per file
+                </p>
+              </div>
+
+              <div className="space-y-3">
+                <Label>Maximum Duration (minutes): {Math.floor(maxDuration / 60)}</Label>
+                <Slider
+                  value={[maxDuration]}
+                  onValueChange={(value) => setMaxDuration(value[0])}
+                  max={10800} // 3 hours
+                  min={300} // 5 minutes
+                  step={300} // 5 minute steps
+                  className="w-full"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Up to 1 hour at default resolution, 3 hours at low resolution
+                </p>
+              </div>
+
+              <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                <h4 className="text-sm font-medium text-blue-800 dark:text-blue-200 mb-2">
+                  Supported Formats
+                </h4>
+                <div className="text-xs text-blue-700 dark:text-blue-300 space-y-1">
+                  <div><strong>Video:</strong> MP4, MPEG, MOV, AVI, FLV, MPG, WEBM, WMV, 3GPP</div>
+                  <div><strong>Audio:</strong> WAV, MP3, AIFF, AAC, OGG Vorbis, FLAC</div>
+                </div>
               </div>
             </CardContent>
           </Card>
 
           {/* Language & Audio Settings */}
-          <Card className="border-warning/20 shadow-lg">
+          <Card className="border-blue-500/20 shadow-lg bg-card backdrop-blur">
             <CardHeader className="pb-4">
-              <CardTitle className="flex items-center gap-2 text-warning">
-                <Globe className="h-5 w-5" />
+              <CardTitle className="flex items-center gap-2 text-blue-500">
+                <Languages className="h-5 w-5" />
                 Language & Audio
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="space-y-2">
-                <label className="font-medium">Default transcription language</label>
-                <Select value={defaultLanguage} onValueChange={setDefaultLanguage}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="en">English</SelectItem>
-                    <SelectItem value="es">Spanish</SelectItem>
-                    <SelectItem value="fr">French</SelectItem>
-                    <SelectItem value="de">German</SelectItem>
-                    <SelectItem value="it">Italian</SelectItem>
-                    <SelectItem value="pt">Portuguese</SelectItem>
-                    <SelectItem value="zh">Chinese</SelectItem>
-                    <SelectItem value="ja">Japanese</SelectItem>
-                    <SelectItem value="ko">Korean</SelectItem>
-                    <SelectItem value="ar">Arabic</SelectItem>
-                  </SelectContent>
-                </Select>
+              <div className="space-y-3">
+                <Label>Default Language</Label>
+                <LanguageSelector language={defaultLanguage} setLanguage={setDefaultLanguage} />
               </div>
 
-              <Separator />
-
               <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium">Notifications</p>
-                  <p className="text-sm text-muted-foreground">Get notified about transcription completion</p>
+                <div className="space-y-1">
+                  <Label htmlFor="notifications">Enable notifications</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Show completion notifications for transcriptions
+                  </p>
                 </div>
-                <Switch checked={notifications} onCheckedChange={setNotifications} />
+                <Switch
+                  id="notifications"
+                  checked={notifications}
+                  onCheckedChange={setNotifications}
+                />
               </div>
             </CardContent>
           </Card>
 
-          {/* Data & History Settings */}
-          <Card className="border-success/20 shadow-lg">
+          {/* Data & History */}
+          <Card className="border-purple-500/20 shadow-lg bg-card backdrop-blur">
             <CardHeader className="pb-4">
-              <CardTitle className="flex items-center gap-2 text-success">
-                <Shield className="h-5 w-5" />
+              <CardTitle className="flex items-center gap-2 text-purple-500">
+                <Database className="h-5 w-5" />
                 Data & History
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium">Save transcripts locally</p>
-                  <p className="text-sm text-muted-foreground">Keep transcription history on this device</p>
+                <div className="space-y-1">
+                  <Label htmlFor="save-transcripts">Save transcripts locally</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Automatically save completed transcriptions to history
+                  </p>
                 </div>
-                <Switch checked={saveTranscripts} onCheckedChange={setSaveTranscripts} />
-              </div>
-
-              <Separator />
-
-              <div className="space-y-3">
-                <Button 
-                  variant="outline" 
-                  className="w-full justify-start hover:bg-primary/10"
-                  onClick={() => navigate('/history')}
-                >
-                  <History className="h-4 w-4 mr-2" />
-                  View Transcription History ({history.length} items)
-                </Button>
-                <Button 
-                  variant="outline" 
-                  className="w-full justify-start hover:bg-primary/10"
-                  onClick={handleExportData}
-                >
-                  <Download className="h-4 w-4 mr-2" />
-                  Export All Data
-                </Button>
-                <Button 
-                  variant="outline" 
-                  className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10"
-                  onClick={handleClearHistory}
-                  disabled={history.length === 0}
-                >
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Clear All History
-                </Button>
+                <Switch
+                  id="save-transcripts"
+                  checked={saveTranscripts}
+                  onCheckedChange={setSaveTranscripts}
+                />
               </div>
             </CardContent>
           </Card>
 
-          {/* Advanced Settings */}
-          <Card className="border-muted/20 shadow-lg lg:col-span-2">
+          {/* Advanced */}
+          <Card className="border-red-500/20 shadow-lg bg-card backdrop-blur">
             <CardHeader className="pb-4">
-              <CardTitle className="flex items-center gap-2">
-                <SettingsIcon className="h-5 w-5" />
+              <CardTitle className="flex items-center gap-2 text-red-500">
+                <Zap className="h-5 w-5" />
                 Advanced
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-3 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Version:</span>
-                  <span className="font-medium">2.1.0</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Transcription Model:</span>
-                  <span className="font-medium">Gemini 2.5 Flash Preview</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Analysis Model:</span>
-                  <span className="font-medium">Gemini 2.0 Flash-Lite</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Last Updated:</span>
-                  <span className="font-medium">Today</span>
-                </div>
-              </div>
-
-              <Separator />
-
-              <div className="space-y-2">
-                <p className="text-sm text-muted-foreground">
-                  AI-powered transcription with advanced language support, speaker identification, and real-time processing.
+            <CardContent>
+              <div className="space-y-4">
+                <Button 
+                  variant="destructive" 
+                  onClick={resetSettings}
+                  className="w-full"
+                >
+                  Reset All Settings
+                </Button>
+                <p className="text-xs text-muted-foreground text-center">
+                  This will restore all settings to their default values
                 </p>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <Button variant="outline" size="sm" className="text-xs">
-                  <FileText className="h-3 w-3 mr-1" />
-                  Release Notes
-                </Button>
-                <Button variant="outline" size="sm" className="text-xs">
-                  <Globe className="h-3 w-3 mr-1" />
-                  Support
-                </Button>
               </div>
             </CardContent>
           </Card>

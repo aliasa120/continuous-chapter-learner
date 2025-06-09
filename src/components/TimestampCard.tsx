@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Play, Pause, Square, User, Award, Clock, BookOpen, Lightbulb, Loader2, RotateCcw } from 'lucide-react';
@@ -17,6 +16,7 @@ interface TimestampCardProps {
   isPlaying: boolean;
   globalIsPlaying: boolean;
   onGlobalPlayPause: () => void;
+  language?: string;
 }
 
 const TimestampCard: React.FC<TimestampCardProps> = ({
@@ -27,7 +27,8 @@ const TimestampCard: React.FC<TimestampCardProps> = ({
   seekToTimestamp,
   isPlaying,
   globalIsPlaying,
-  onGlobalPlayPause
+  onGlobalPlayPause,
+  language = 'en'
 }) => {
   const [showSummary, setShowSummary] = useState(false);
   const [showExplanation, setShowExplanation] = useState(false);
@@ -41,6 +42,10 @@ const TimestampCard: React.FC<TimestampCardProps> = ({
   const { toast } = useToast();
   const segmentTimerRef = useRef<NodeJS.Timeout | null>(null);
   const progressTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // RTL languages
+  const rtlLanguages = ['ar', 'he', 'ur', 'fa', 'ps', 'sd'];
+  const isRTL = rtlLanguages.includes(language);
 
   useEffect(() => {
     if (isSegmentPlaying && timestampPlayerMode === 'segment') {
@@ -66,7 +71,7 @@ const TimestampCard: React.FC<TimestampCardProps> = ({
 
   const handleSegmentPlay = () => {
     if (timestampPlayerMode === 'segment') {
-      // Stop global player
+      // Stop global player if running
       if (globalIsPlaying) {
         onGlobalPlayPause();
       }
@@ -82,8 +87,19 @@ const TimestampCard: React.FC<TimestampCardProps> = ({
         handleSegmentStop();
       }, duration);
       
+    } else if (timestampPlayerMode === 'loop') {
+      // Loop mode - play segment and restart
+      seekToTimestamp(line.startTime);
+      setIsSegmentPlaying(true);
+      
+      const duration = (line.endTime - line.startTime) * 1000;
+      segmentTimerRef.current = setTimeout(() => {
+        // Restart the segment
+        setTimeout(() => handleSegmentPlay(), 500);
+      }, duration);
+      
     } else {
-      // Regular behavior - seek and play
+      // Regular behavior - seek and play globally
       seekToTimestamp(line.startTime);
       if (!globalIsPlaying) {
         onGlobalPlayPause();
@@ -101,11 +117,6 @@ const TimestampCard: React.FC<TimestampCardProps> = ({
     if (progressTimerRef.current) {
       clearInterval(progressTimerRef.current);
       progressTimerRef.current = null;
-    }
-    
-    if (timestampPlayerMode === 'loop') {
-      // Restart the segment
-      setTimeout(() => handleSegmentPlay(), 500);
     }
   };
 
@@ -168,11 +179,12 @@ const TimestampCard: React.FC<TimestampCardProps> = ({
           ? 'border-primary shadow-lg bg-primary/5 ring-2 ring-primary/20 transform scale-[1.02]' 
           : 'border-border hover:border-primary/30 bg-card hover:shadow-md'
       }`}
+      dir={isRTL ? 'rtl' : 'ltr'}
     >
       <div className="flex flex-col">
         {/* Header Row */}
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2 flex-wrap">
+        <div className={`flex items-center justify-between mb-3 ${isRTL ? 'flex-row-reverse' : ''}`}>
+          <div className={`flex items-center gap-2 flex-wrap ${isRTL ? 'flex-row-reverse' : ''}`}>
             <span className="text-xs sm:text-sm font-mono text-primary bg-primary/10 px-2 py-1 rounded-lg flex items-center gap-1">
               <Clock className="h-3 w-3" />
               {line.timestamp}
@@ -190,9 +202,9 @@ const TimestampCard: React.FC<TimestampCardProps> = ({
               </div>
             )}
           </div>
-          <div className="flex items-center gap-1">
+          <div className={`flex items-center gap-1 ${isRTL ? 'flex-row-reverse' : ''}`}>
             {/* Segment Player Controls */}
-            <div className="flex items-center gap-1">
+            <div className={`flex items-center gap-1 ${isRTL ? 'flex-row-reverse' : ''}`}>
               <Button 
                 variant="outline" 
                 size="sm" 
@@ -264,6 +276,7 @@ const TimestampCard: React.FC<TimestampCardProps> = ({
             currentTime={currentTime}
             startTime={line.startTime}
             endTime={line.endTime}
+            language={language}
           />
         </div>
 

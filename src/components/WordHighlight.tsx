@@ -8,6 +8,7 @@ interface WordHighlightProps {
   startTime: number;
   endTime: number;
   wordsPerSecond?: number;
+  language?: string;
 }
 
 const WordHighlight: React.FC<WordHighlightProps> = ({
@@ -15,13 +16,21 @@ const WordHighlight: React.FC<WordHighlightProps> = ({
   currentTime,
   startTime,
   endTime,
-  wordsPerSecond = 2.5
+  wordsPerSecond = 2.5,
+  language = 'en'
 }) => {
   const { wordHighlightColor, wordHighlightOpacity, wordHighlightAnimation } = useSettings();
+  
+  // RTL languages
+  const rtlLanguages = ['ar', 'he', 'ur', 'fa', 'ps', 'sd'];
+  const isRTL = rtlLanguages.includes(language);
   
   const words = text.split(' ');
   const segmentDuration = endTime - startTime;
   const timePerWord = segmentDuration / words.length;
+  
+  // For RTL languages, reverse word order for highlighting timing
+  const processedWords = isRTL ? [...words].reverse() : words;
   
   const getColorClass = (color: string) => {
     switch (color) {
@@ -47,7 +56,8 @@ const WordHighlight: React.FC<WordHighlightProps> = ({
   };
   
   const getWordHighlight = (wordIndex: number) => {
-    const wordStartTime = startTime + (wordIndex * timePerWord);
+    const actualIndex = isRTL ? words.length - 1 - wordIndex : wordIndex;
+    const wordStartTime = startTime + (actualIndex * timePerWord);
     const wordEndTime = wordStartTime + timePerWord;
     
     // Current word being spoken
@@ -68,7 +78,8 @@ const WordHighlight: React.FC<WordHighlightProps> = ({
   };
 
   const getWordProgress = (wordIndex: number) => {
-    const wordStartTime = startTime + (wordIndex * timePerWord);
+    const actualIndex = isRTL ? words.length - 1 - wordIndex : wordIndex;
+    const wordStartTime = startTime + (actualIndex * timePerWord);
     const wordEndTime = wordStartTime + timePerWord;
     
     if (currentTime >= wordStartTime && currentTime <= wordEndTime) {
@@ -79,16 +90,21 @@ const WordHighlight: React.FC<WordHighlightProps> = ({
   };
 
   return (
-    <div className="leading-relaxed text-sm sm:text-base">
+    <div 
+      className={`leading-relaxed text-sm sm:text-base ${isRTL ? 'text-right' : 'text-left'}`}
+      dir={isRTL ? 'rtl' : 'ltr'}
+      style={{ fontFamily: isRTL ? '"Noto Sans Arabic", "Amiri", serif' : 'inherit' }}
+    >
       {words.map((word, index) => {
         const progress = getWordProgress(index);
-        const isActive = currentTime >= startTime + (index * timePerWord) && 
-                        currentTime <= startTime + ((index + 1) * timePerWord);
+        const actualIndex = isRTL ? words.length - 1 - index : index;
+        const isActive = currentTime >= startTime + (actualIndex * timePerWord) && 
+                        currentTime <= startTime + ((actualIndex + 1) * timePerWord);
         
         return (
           <span
             key={index}
-            className={`relative inline-block transition-all duration-300 ease-in-out mr-1 ${getWordHighlight(index)}`}
+            className={`relative inline-block transition-all duration-300 ease-in-out ${isRTL ? 'ml-1' : 'mr-1'} ${getWordHighlight(index)}`}
             style={{
               transitionDelay: `${index * 50}ms`
             }}
@@ -96,7 +112,7 @@ const WordHighlight: React.FC<WordHighlightProps> = ({
             {word}
             {isActive && wordHighlightAnimation !== 'none' && (
               <div 
-                className={`absolute bottom-0 left-0 h-0.5 bg-${wordHighlightColor} transition-all duration-100`}
+                className={`absolute bottom-0 ${isRTL ? 'right-0' : 'left-0'} h-0.5 bg-${wordHighlightColor} transition-all duration-100`}
                 style={{ width: `${progress}%` }}
               />
             )}

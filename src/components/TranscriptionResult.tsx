@@ -1,11 +1,12 @@
-
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { Clipboard, ClipboardCheck, Play, Pause, Award, Grid3X3, Eye, Zap, FileText } from 'lucide-react';
+import { Clipboard, ClipboardCheck, Play, Pause, Award, Grid3X3, Eye, Zap, FileText, Download } from 'lucide-react';
 import { useSettings } from '../contexts/SettingsContext';
+import ExportDialog from './ExportDialog';
+import { exportTranscription } from '../utils/exportFormats';
 import TimestampCard from './TimestampCard';
 import WordHighlight from './WordHighlight';
 import type { TranscriptionLine } from '../utils/geminiTranscription';
@@ -17,6 +18,8 @@ interface TranscriptionResultProps {
   seekToTimestamp: (seconds: number) => void;
   isPlaying: boolean;
   onPlayPause: () => void;
+  language?: string;
+  filename?: string;
 }
 
 const TranscriptionResult: React.FC<TranscriptionResultProps> = ({
@@ -25,11 +28,18 @@ const TranscriptionResult: React.FC<TranscriptionResultProps> = ({
   currentTime,
   seekToTimestamp,
   isPlaying,
-  onPlayPause
+  onPlayPause,
+  language = 'en',
+  filename = 'transcription'
 }) => {
   const [copied, setCopied] = React.useState(false);
+  const [showExportDialog, setShowExportDialogState] = React.useState(false);
   const activeLineRef = React.useRef<HTMLDivElement>(null);
-  const { autoScroll, showConfidence } = useSettings();
+  const { autoScroll, showConfidence, defaultExportFormat, showExportDialog: showExportDialogSetting } = useSettings();
+
+  // RTL languages
+  const rtlLanguages = ['ar', 'he', 'ur', 'fa', 'ps', 'sd'];
+  const isRTL = rtlLanguages.includes(language);
 
   const copyToClipboard = () => {
     const fullText = transcriptionLines
@@ -42,6 +52,14 @@ const TranscriptionResult: React.FC<TranscriptionResultProps> = ({
     navigator.clipboard.writeText(fullText);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleExport = () => {
+    if (showExportDialogSetting) {
+      setShowExportDialogState(true);
+    } else {
+      exportTranscription(transcriptionLines, defaultExportFormat as any, filename);
+    }
   };
 
   const isLineActive = (line: TranscriptionLine) => {
@@ -129,207 +147,228 @@ const TranscriptionResult: React.FC<TranscriptionResultProps> = ({
   const summary = generateSummary();
 
   return (
-    <div className="h-[500px] sm:h-[600px]">
-      <Tabs defaultValue="segments" className="h-full flex flex-col">
-        <div className="flex justify-between items-center px-4 sm:px-6 py-3 border-b bg-card/50 backdrop-blur-sm">
-          <TabsList className="grid w-auto grid-cols-3 bg-muted/50">
-            <TabsTrigger value="segments" className="flex items-center gap-2 text-xs sm:text-sm data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-              <Grid3X3 className="h-3 w-3 sm:h-4 sm:w-4" />
-              <span className="hidden sm:inline">Segments</span>
-              <span className="sm:hidden">Seg</span>
-              <Badge variant="secondary" className="ml-1 text-xs px-1.5 py-0.5">
-                {transcriptionLines.length}
-              </Badge>
-            </TabsTrigger>
-            <TabsTrigger value="easy-view" className="flex items-center gap-2 text-xs sm:text-sm data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-              <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
-              <span className="hidden sm:inline">Easy View</span>
-              <span className="sm:hidden">Easy</span>
-            </TabsTrigger>
-            <TabsTrigger value="actions" className="flex items-center gap-2 text-xs sm:text-sm data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-              <Zap className="h-3 w-3 sm:h-4 sm:w-4" />
-              <span className="hidden sm:inline">Actions</span>
-              <span className="sm:hidden">Act</span>
-              {actionItems.length > 0 && (
+    <>
+      <div className="h-[500px] sm:h-[600px]">
+        <Tabs defaultValue="segments" className="h-full flex flex-col">
+          <div className="flex justify-between items-center px-4 sm:px-6 py-3 border-b bg-card/50 backdrop-blur-sm">
+            <TabsList className="grid w-auto grid-cols-3 bg-muted/50">
+              <TabsTrigger value="segments" className="flex items-center gap-2 text-xs sm:text-sm data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                <Grid3X3 className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="hidden sm:inline">Segments</span>
+                <span className="sm:hidden">Seg</span>
                 <Badge variant="secondary" className="ml-1 text-xs px-1.5 py-0.5">
-                  {actionItems.length}
+                  {transcriptionLines.length}
                 </Badge>
-              )}
-            </TabsTrigger>
-          </TabsList>
-          
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              className="text-xs flex items-center gap-1 text-primary hover:bg-primary/10 border-primary/20 h-8"
-              onClick={onPlayPause}
-            >
-              {isPlaying ? (
-                <Pause className="h-3 w-3" />
-              ) : (
-                <Play className="h-3 w-3" />
-              )}
-              <span className="hidden sm:inline">{isPlaying ? "Pause" : "Play"}</span>
-            </Button>
+              </TabsTrigger>
+              <TabsTrigger value="easy-view" className="flex items-center gap-2 text-xs sm:text-sm data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="hidden sm:inline">Easy View</span>
+                <span className="sm:hidden">Easy</span>
+              </TabsTrigger>
+              <TabsTrigger value="actions" className="flex items-center gap-2 text-xs sm:text-sm data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                <Zap className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="hidden sm:inline">Actions</span>
+                <span className="sm:hidden">Act</span>
+                {actionItems.length > 0 && (
+                  <Badge variant="secondary" className="ml-1 text-xs px-1.5 py-0.5">
+                    {actionItems.length}
+                  </Badge>
+                )}
+              </TabsTrigger>
+            </TabsList>
             
-            {showConfidence && (
-              <div className="hidden md:flex items-center gap-1 text-xs text-muted-foreground bg-muted rounded px-2 py-1">
-                <Award className="h-3 w-3" />
-                <span>Avg: {averageConfidence.toFixed(0)}%</span>
-              </div>
-            )}
-            
-            <Button
-              variant="outline"
-              size="sm"
-              className="text-xs flex items-center gap-1 text-foreground hover:bg-muted border-foreground/20 h-8 font-semibold"
-              onClick={copyToClipboard}
-            >
-              {copied ? (
-                <>
-                  <ClipboardCheck className="h-3 w-3" />
-                  <span className="hidden sm:inline">Copied</span>
-                </>
-              ) : (
-                <>
-                  <Clipboard className="h-3 w-3" />
-                  <span className="hidden sm:inline">Copy</span>
-                </>
-              )}
-            </Button>
-          </div>
-        </div>
-        
-        <div className="flex-1 overflow-hidden">
-          <TabsContent value="segments" className="h-full m-0">
-            <ScrollArea className="h-full p-3 sm:p-4">
-              <div className="space-y-3 sm:space-y-4">
-                {transcriptionLines.map((line, index) => {
-                  const isActive = isLineActive(line);
-                  
-                  return (
-                    <div key={index} ref={isActive ? activeLineRef : null}>
-                      <TimestampCard
-                        line={line}
-                        index={index}
-                        isActive={isActive}
-                        currentTime={currentTime}
-                        seekToTimestamp={seekToTimestamp}
-                        isPlaying={isActive && isPlaying}
-                        globalIsPlaying={isPlaying}
-                        onGlobalPlayPause={onPlayPause}
-                      />
-                    </div>
-                  );
-                })}
-              </div>
-            </ScrollArea>
-          </TabsContent>
-          
-          <TabsContent value="easy-view" className="h-full m-0 p-4 sm:p-6">
-            <ScrollArea className="h-full">
-              <div className="space-y-6">
-                <div className="flex items-center gap-2 mb-4">
-                  <FileText className="h-5 w-5 text-primary" />
-                  <h3 className="text-lg font-semibold text-foreground">Easy Reading View</h3>
-                </div>
-                
-                <div className="bg-card/50 border border-border rounded-lg p-4 sm:p-6">
-                  <h4 className="text-md font-medium text-foreground mb-3">Summary</h4>
-                  <div className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">
-                    {summary}
-                  </div>
-                </div>
-                
-                <div className="bg-card/50 border border-border rounded-lg p-4 sm:p-6">
-                  <h4 className="text-md font-medium text-foreground mb-3">Full Transcript</h4>
-                  <div className="prose dark:prose-invert max-w-none">
-                    {transcriptionLines.map((line, index) => {
-                      const isActive = isLineActive(line);
-                      return (
-                        <div 
-                          key={index} 
-                          className={`mb-2 p-2 rounded transition-all duration-300 ${
-                            isActive ? 'bg-primary/10 border-l-4 border-primary' : ''
-                          }`}
-                        >
-                          <WordHighlight
-                            text={line.text}
-                            currentTime={currentTime}
-                            startTime={line.startTime}
-                            endTime={line.endTime}
-                          />
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-            </ScrollArea>
-          </TabsContent>
-          
-          <TabsContent value="actions" className="h-full m-0 p-4 sm:p-6">
-            <ScrollArea className="h-full">
-              <div className="space-y-6">
-                <div className="flex items-center gap-2 mb-4">
-                  <Zap className="h-5 w-5 text-accent" />
-                  <h3 className="text-lg font-semibold text-foreground">Action Items & Key Points</h3>
-                </div>
-                
-                {actionItems.length === 0 ? (
-                  <div className="text-center py-8">
-                    <div className="text-4xl mb-4">🔍</div>
-                    <p className="text-muted-foreground">No specific action items detected in this transcription.</p>
-                    <p className="text-sm text-muted-foreground mt-2">Action detection looks for words like "task", "action", "need to", "should", etc.</p>
-                  </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-xs flex items-center gap-1 text-primary hover:bg-primary/10 border-primary/20 h-8"
+                onClick={onPlayPause}
+              >
+                {isPlaying ? (
+                  <Pause className="h-3 w-3" />
                 ) : (
-                  <div className="space-y-4">
-                    <div className="bg-accent/10 border border-accent/20 rounded-lg p-4">
-                      <h4 className="text-md font-medium text-accent mb-3">
-                        Detected Actions ({actionItems.length})
-                      </h4>
-                      <ul className="space-y-3">
-                        {actionItems.map((action, index) => (
-                          <li key={index} className="flex items-start text-sm">
-                            <span className="text-accent mr-3 mt-1 font-bold">•</span>
-                            <span className="text-foreground leading-relaxed">{action}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
+                  <Play className="h-3 w-3" />
+                )}
+                <span className="hidden sm:inline">{isPlaying ? "Pause" : "Play"}</span>
+              </Button>
+              
+              {showConfidence && (
+                <div className="hidden md:flex items-center gap-1 text-xs text-muted-foreground bg-muted rounded px-2 py-1">
+                  <Award className="h-3 w-3" />
+                  <span>Avg: {averageConfidence.toFixed(0)}%</span>
+                </div>
+              )}
+              
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-xs flex items-center gap-1 text-foreground hover:bg-muted border-foreground/20 h-8 font-semibold"
+                onClick={copyToClipboard}
+              >
+                {copied ? (
+                  <>
+                    <ClipboardCheck className="h-3 w-3" />
+                    <span className="hidden sm:inline">Copied</span>
+                  </>
+                ) : (
+                  <>
+                    <Clipboard className="h-3 w-3" />
+                    <span className="hidden sm:inline">Copy</span>
+                  </>
+                )}
+              </Button>
+
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-xs flex items-center gap-1 text-green-600 hover:bg-green-50 border-green-200 h-8 font-semibold"
+                onClick={handleExport}
+              >
+                <Download className="h-3 w-3" />
+                <span className="hidden sm:inline">Export</span>
+              </Button>
+            </div>
+          </div>
+          
+          <div className="flex-1 overflow-hidden">
+            <TabsContent value="segments" className="h-full m-0">
+              <ScrollArea className="h-full p-3 sm:p-4">
+                <div className="space-y-3 sm:space-y-4" dir={isRTL ? 'rtl' : 'ltr'}>
+                  {transcriptionLines.map((line, index) => {
+                    const isActive = isLineActive(line);
                     
-                    <div className="bg-primary/10 border border-primary/20 rounded-lg p-4">
-                      <h4 className="text-md font-medium text-primary mb-3">Quick Stats</h4>
-                      <div className="grid grid-cols-2 gap-4 text-sm">
-                        <div>
-                          <span className="text-muted-foreground">Total segments:</span>
-                          <span className="text-foreground font-medium ml-2">{transcriptionLines.length}</span>
-                        </div>
-                        <div>
-                          <span className="text-muted-foreground">Action items:</span>
-                          <span className="text-foreground font-medium ml-2">{actionItems.length}</span>
-                        </div>
-                        <div>
-                          <span className="text-muted-foreground">Avg confidence:</span>
-                          <span className="text-foreground font-medium ml-2">{averageConfidence.toFixed(0)}%</span>
-                        </div>
-                        <div>
-                          <span className="text-muted-foreground">Speakers:</span>
-                          <span className="text-foreground font-medium ml-2">
-                            {new Set(transcriptionLines.map(l => l.speaker).filter(Boolean)).size || 1}
-                          </span>
+                    return (
+                      <div key={index} ref={isActive ? activeLineRef : null}>
+                        <TimestampCard
+                          line={line}
+                          index={index}
+                          isActive={isActive}
+                          currentTime={currentTime}
+                          seekToTimestamp={seekToTimestamp}
+                          isPlaying={isActive && isPlaying}
+                          globalIsPlaying={isPlaying}
+                          onGlobalPlayPause={onPlayPause}
+                          language={language}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+              </ScrollArea>
+            </TabsContent>
+            
+            <TabsContent value="easy-view" className="h-full m-0 p-4 sm:p-6">
+              <ScrollArea className="h-full">
+                <div className="space-y-6" dir={isRTL ? 'rtl' : 'ltr'}>
+                  <div className="flex items-center gap-2 mb-4">
+                    <FileText className="h-5 w-5 text-primary" />
+                    <h3 className="text-lg font-semibold text-foreground">Easy Reading View</h3>
+                  </div>
+                  
+                  <div className="bg-card/50 border border-border rounded-lg p-4 sm:p-6">
+                    <h4 className="text-md font-medium text-foreground mb-3">Summary</h4>
+                    <div className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">
+                      {summary}
+                    </div>
+                  </div>
+                  
+                  <div className="bg-card/50 border border-border rounded-lg p-4 sm:p-6">
+                    <h4 className="text-md font-medium text-foreground mb-3">Full Transcript</h4>
+                    <div className="prose dark:prose-invert max-w-none">
+                      {transcriptionLines.map((line, index) => {
+                        const isActive = isLineActive(line);
+                        return (
+                          <div 
+                            key={index} 
+                            className={`mb-2 p-2 rounded transition-all duration-300 ${
+                              isActive ? 'bg-primary/10 border-l-4 border-primary' : ''
+                            }`}
+                          >
+                            <WordHighlight
+                              text={line.text}
+                              currentTime={currentTime}
+                              startTime={line.startTime}
+                              endTime={line.endTime}
+                              language={language}
+                            />
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              </ScrollArea>
+            </TabsContent>
+            
+            <TabsContent value="actions" className="h-full m-0 p-4 sm:p-6">
+              <ScrollArea className="h-full">
+                <div className="space-y-6">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Zap className="h-5 w-5 text-accent" />
+                    <h3 className="text-lg font-semibold text-foreground">Action Items & Key Points</h3>
+                  </div>
+                  
+                  {actionItems.length === 0 ? (
+                    <div className="text-center py-8">
+                      <div className="text-4xl mb-4">🔍</div>
+                      <p className="text-muted-foreground">No specific action items detected in this transcription.</p>
+                      <p className="text-sm text-muted-foreground mt-2">Action detection looks for words like "task", "action", "need to", "should", etc.</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="bg-accent/10 border border-accent/20 rounded-lg p-4">
+                        <h4 className="text-md font-medium text-accent mb-3">
+                          Detected Actions ({actionItems.length})
+                        </h4>
+                        <ul className="space-y-3">
+                          {actionItems.map((action, index) => (
+                            <li key={index} className="flex items-start text-sm">
+                              <span className="text-accent mr-3 mt-1 font-bold">•</span>
+                              <span className="text-foreground leading-relaxed">{action}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                      
+                      <div className="bg-primary/10 border border-primary/20 rounded-lg p-4">
+                        <h4 className="text-md font-medium text-primary mb-3">Quick Stats</h4>
+                        <div className="grid grid-cols-2 gap-4 text-sm">
+                          <div>
+                            <span className="text-muted-foreground">Total segments:</span>
+                            <span className="text-foreground font-medium ml-2">{transcriptionLines.length}</span>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground">Action items:</span>
+                            <span className="text-foreground font-medium ml-2">{actionItems.length}</span>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground">Avg confidence:</span>
+                            <span className="text-foreground font-medium ml-2">{averageConfidence.toFixed(0)}%</span>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground">Speakers:</span>
+                            <span className="text-foreground font-medium ml-2">
+                              {new Set(transcriptionLines.map(l => l.speaker).filter(Boolean)).size || 1}
+                            </span>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                )}
-              </div>
-            </ScrollArea>
-          </TabsContent>
-        </div>
-      </Tabs>
-    </div>
+                  )}
+                </div>
+              </ScrollArea>
+            </TabsContent>
+          </div>
+        </Tabs>
+      </div>
+
+      <ExportDialog
+        isOpen={showExportDialog}
+        onClose={() => setShowExportDialogState(false)}
+        transcriptionLines={transcriptionLines}
+        filename={filename}
+      />
+    </>
   );
 };
 
