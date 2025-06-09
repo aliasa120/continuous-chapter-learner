@@ -5,7 +5,7 @@ import { Switch } from '@/components/ui/switch';
 import { Slider } from '@/components/ui/slider';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Palette, Volume2, Eye, Zap } from 'lucide-react';
+import { Palette, Volume2, Eye, Zap, HardDrive, Clock } from 'lucide-react';
 import { useSettings } from '../contexts/SettingsContext';
 
 const TranscriptionSettings: React.FC = () => {
@@ -16,11 +16,50 @@ const TranscriptionSettings: React.FC = () => {
     wordHighlightColor, setWordHighlightColor,
     wordHighlightOpacity, setWordHighlightOpacity,
     wordHighlightAnimation, setWordHighlightAnimation,
-    timestampPlayerMode, setTimestampPlayerMode
+    timestampPlayerMode, setTimestampPlayerMode,
+    maxFileSize, setMaxFileSize,
+    maxDuration, setMaxDuration
   } = useSettings();
 
   return (
     <div className="space-y-4">
+      {/* File Upload Limits */}
+      <Card className="border-orange-200/50 bg-orange-50/50">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm flex items-center gap-2 text-orange-700">
+            <HardDrive className="h-4 w-4" />
+            Upload Limits
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label className="text-sm text-foreground">Max File Size ({maxFileSize}MB)</Label>
+            <Slider
+              value={[maxFileSize]}
+              onValueChange={(value) => setMaxFileSize(value[0])}
+              max={2048}
+              min={10}
+              step={10}
+              className="w-full"
+            />
+            <p className="text-xs text-muted-foreground">File size limit for audio and video uploads</p>
+          </div>
+          
+          <div className="space-y-2">
+            <Label className="text-sm text-foreground">Max Duration ({Math.round(maxDuration / 60)} minutes)</Label>
+            <Slider
+              value={[maxDuration]}
+              onValueChange={(value) => setMaxDuration(value[0])}
+              max={7200}
+              min={60}
+              step={60}
+              className="w-full"
+            />
+            <p className="text-xs text-muted-foreground">Maximum duration for audio and video files</p>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Playback Settings */}
       <Card className="border-primary/10 bg-primary/5">
         <CardHeader className="pb-2">

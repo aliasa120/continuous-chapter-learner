@@ -71,8 +71,8 @@ const FileUpload: React.FC<FileUploadProps> = ({ file, setFile }) => {
           <p className="text-xs text-gray-500">
             Video: MP4, MOV, AVI, WMV, MPEG, WEBM, FLV
           </p>
-          <p className="text-xs text-gray-500 mt-1">
-            Max: {maxFileSizeMB}MB, Duration: {maxDurationMinutes} minutes
+          <p className="text-xs text-gray-500 mt-2 font-medium">
+            Max: {maxFileSizeMB}MB • Duration: {maxDurationMinutes} minutes
           </p>
         </div>
       ) : (

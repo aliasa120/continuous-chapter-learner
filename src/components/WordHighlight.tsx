@@ -60,13 +60,13 @@ const WordHighlight: React.FC<WordHighlightProps> = ({
     if (currentTime >= wordStartTime && currentTime <= wordEndTime) {
       const colorClass = getColorClass(wordHighlightColor);
       const animationClass = getAnimationClass(wordHighlightAnimation);
-      return `${colorClass} font-bold px-1 py-0.5 rounded-md shadow-sm transform transition-all duration-200 ${animationClass}`;
+      return `${colorClass} font-medium px-1 py-0.5 rounded-md shadow-sm transform transition-all duration-200 ${animationClass}`;
     }
     
     // Already spoken words
     if (currentTime > wordEndTime) {
       const bgOpacity = Math.floor(wordHighlightOpacity / 2);
-      return `text-${wordHighlightColor}/80 font-medium bg-${wordHighlightColor}/${bgOpacity} px-0.5 py-0.5 rounded transition-all duration-300`;
+      return `text-${wordHighlightColor}/80 font-normal bg-${wordHighlightColor}/${bgOpacity} px-0.5 py-0.5 rounded transition-all duration-300`;
     }
     
     // Not yet spoken words
@@ -88,7 +88,13 @@ const WordHighlight: React.FC<WordHighlightProps> = ({
     <div 
       className={`leading-relaxed text-sm sm:text-base ${isRTL ? 'text-right' : 'text-left'}`}
       dir={isRTL ? 'rtl' : 'ltr'}
-      style={{ fontFamily: isRTL ? '"Noto Sans Arabic", "Amiri", serif' : 'inherit' }}
+      style={{ 
+        fontFamily: isRTL 
+          ? '"Noto Sans Arabic", "Amiri", "Segoe UI", system-ui, sans-serif' 
+          : '"Inter", "Segoe UI", "Roboto", system-ui, sans-serif',
+        wordSpacing: 'normal',
+        letterSpacing: 'normal'
+      }}
     >
       {words.map((word, index) => {
         const progress = getWordProgress(index);
@@ -96,23 +102,23 @@ const WordHighlight: React.FC<WordHighlightProps> = ({
                         currentTime <= startTime + ((index + 1) * timePerWord);
         
         return (
-          <span
-            key={index}
-            className={`relative inline transition-all duration-300 ease-in-out ${getWordHighlight(index)}`}
-            style={{
-              transitionDelay: `${index * 50}ms`,
-              marginRight: isRTL ? '0' : '0.25rem',
-              marginLeft: isRTL ? '0.25rem' : '0'
-            }}
-          >
-            {word}
-            {isActive && wordHighlightAnimation !== 'none' && (
-              <div 
-                className={`absolute bottom-0 ${isRTL ? 'right-0' : 'left-0'} h-0.5 bg-${wordHighlightColor} transition-all duration-100`}
-                style={{ width: `${progress}%` }}
-              />
-            )}
-          </span>
+          <React.Fragment key={index}>
+            <span
+              className={`relative inline transition-all duration-300 ease-in-out ${getWordHighlight(index)}`}
+              style={{
+                transitionDelay: `${index * 50}ms`
+              }}
+            >
+              {word}
+              {isActive && wordHighlightAnimation !== 'none' && (
+                <div 
+                  className={`absolute bottom-0 ${isRTL ? 'right-0' : 'left-0'} h-0.5 bg-${wordHighlightColor} transition-all duration-100`}
+                  style={{ width: `${progress}%` }}
+                />
+              )}
+            </span>
+            {index < words.length - 1 && ' '}
+          </React.Fragment>
         );
       })}
     </div>
