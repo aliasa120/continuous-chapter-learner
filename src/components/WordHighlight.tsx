@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useSettings } from '../contexts/SettingsContext';
 
@@ -29,9 +28,6 @@ const WordHighlight: React.FC<WordHighlightProps> = ({
   const segmentDuration = endTime - startTime;
   const timePerWord = segmentDuration / words.length;
   
-  // For RTL languages, reverse word order for highlighting timing
-  const processedWords = isRTL ? [...words].reverse() : words;
-  
   const getColorClass = (color: string) => {
     switch (color) {
       case 'primary': return 'bg-primary text-primary-foreground';
@@ -56,8 +52,9 @@ const WordHighlight: React.FC<WordHighlightProps> = ({
   };
   
   const getWordHighlight = (wordIndex: number) => {
-    const actualIndex = isRTL ? words.length - 1 - wordIndex : wordIndex;
-    const wordStartTime = startTime + (actualIndex * timePerWord);
+    // For RTL languages, we need to calculate timing from right to left visually
+    // but keep the logical word order for timing calculations
+    const wordStartTime = startTime + (wordIndex * timePerWord);
     const wordEndTime = wordStartTime + timePerWord;
     
     // Current word being spoken
@@ -78,8 +75,7 @@ const WordHighlight: React.FC<WordHighlightProps> = ({
   };
 
   const getWordProgress = (wordIndex: number) => {
-    const actualIndex = isRTL ? words.length - 1 - wordIndex : wordIndex;
-    const wordStartTime = startTime + (actualIndex * timePerWord);
+    const wordStartTime = startTime + (wordIndex * timePerWord);
     const wordEndTime = wordStartTime + timePerWord;
     
     if (currentTime >= wordStartTime && currentTime <= wordEndTime) {
@@ -97,9 +93,8 @@ const WordHighlight: React.FC<WordHighlightProps> = ({
     >
       {words.map((word, index) => {
         const progress = getWordProgress(index);
-        const actualIndex = isRTL ? words.length - 1 - index : index;
-        const isActive = currentTime >= startTime + (actualIndex * timePerWord) && 
-                        currentTime <= startTime + ((actualIndex + 1) * timePerWord);
+        const isActive = currentTime >= startTime + (index * timePerWord) && 
+                        currentTime <= startTime + ((index + 1) * timePerWord);
         
         return (
           <span

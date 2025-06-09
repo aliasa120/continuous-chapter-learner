@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Play, Pause, Square, User, Award, Clock, BookOpen, Lightbulb, Loader2, RotateCcw } from 'lucide-react';

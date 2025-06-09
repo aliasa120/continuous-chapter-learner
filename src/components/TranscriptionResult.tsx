@@ -1,9 +1,10 @@
+
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { Clipboard, ClipboardCheck, Play, Pause, Award, Grid3X3, Eye, Zap, FileText, Download } from 'lucide-react';
+import { Clipboard, ClipboardCheck, Play, Pause, Award, Grid3X3, Eye, Zap, FileText, Download, Target, CheckCircle } from 'lucide-react';
 import { useSettings } from '../contexts/SettingsContext';
 import ExportDialog from './ExportDialog';
 import { exportTranscription } from '../utils/exportFormats';
@@ -68,16 +69,67 @@ const TranscriptionResult: React.FC<TranscriptionResultProps> = ({
 
   const getActionItems = () => {
     const actions: string[] = [];
-    transcriptionLines.forEach(line => {
+    const actionKeywords = [
+      'action', 'task', 'do', 'will', 'should', 'need to', 'must', 'plan', 'decide',
+      'next step', 'follow up', 'reminder', 'schedule', 'assign', 'complete', 'finish',
+      'implement', 'create', 'build', 'send', 'call', 'email', 'meet', 'discuss',
+      'review', 'approve', 'prepare', 'research', 'investigate', 'analyze', 'update',
+      'deadline', 'due', 'priority', 'urgent', 'important', 'commit', 'promise',
+      'agree', 'decision', 'resolve', 'fix', 'solve', 'address', 'handle'
+    ];
+
+    transcriptionLines.forEach((line, index) => {
       const text = line.text.toLowerCase();
-      if (text.includes('action') || text.includes('task') || text.includes('do') || 
-          text.includes('will') || text.includes('should') || text.includes('need to') ||
-          text.includes('must') || text.includes('plan') || text.includes('decide') ||
-          text.includes('next step') || text.includes('follow up') || text.includes('reminder')) {
-        actions.push(line.text);
+      const hasActionKeyword = actionKeywords.some(keyword => text.includes(keyword));
+      
+      if (hasActionKeyword) {
+        // Extract the sentence or context around the action keyword
+        const sentences = line.text.split(/[.!?]+/).filter(s => s.trim().length > 10);
+        sentences.forEach(sentence => {
+          const sentenceLower = sentence.toLowerCase();
+          if (actionKeywords.some(keyword => sentenceLower.includes(keyword))) {
+            actions.push({
+              text: sentence.trim(),
+              timestamp: line.timestamp,
+              speaker: line.speaker,
+              index: index
+            });
+          }
+        });
       }
     });
-    return actions.slice(0, 10);
+    
+    return actions.slice(0, 15); // Limit to 15 most relevant actions
+  };
+
+  const getMeetingInsights = () => {
+    const insights = {
+      decisions: [],
+      questions: [],
+      commitments: [],
+      topics: []
+    };
+
+    transcriptionLines.forEach(line => {
+      const text = line.text.toLowerCase();
+      
+      // Decision indicators
+      if (text.includes('decide') || text.includes('agreed') || text.includes('conclusion') || text.includes('resolution')) {
+        insights.decisions.push(line.text);
+      }
+      
+      // Question indicators
+      if (text.includes('?') || text.includes('question') || text.includes('clarify') || text.includes('understand')) {
+        insights.questions.push(line.text);
+      }
+      
+      // Commitment indicators
+      if (text.includes('commit') || text.includes('promise') || text.includes('guarantee') || text.includes('ensure')) {
+        insights.commitments.push(line.text);
+      }
+    });
+
+    return insights;
   };
 
   const generateSummary = () => {
@@ -144,6 +196,7 @@ const TranscriptionResult: React.FC<TranscriptionResultProps> = ({
 
   const averageConfidence = transcriptionLines.reduce((sum, line) => sum + (line.confidence || 0), 0) / transcriptionLines.length;
   const actionItems = getActionItems();
+  const meetingInsights = getMeetingInsights();
   const summary = generateSummary();
 
   return (
@@ -166,7 +219,7 @@ const TranscriptionResult: React.FC<TranscriptionResultProps> = ({
                 <span className="sm:hidden">Easy</span>
               </TabsTrigger>
               <TabsTrigger value="actions" className="flex items-center gap-2 text-xs sm:text-sm data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-                <Zap className="h-3 w-3 sm:h-4 sm:w-4" />
+                <Target className="h-3 w-3 sm:h-4 sm:w-4" />
                 <span className="hidden sm:inline">Actions</span>
                 <span className="sm:hidden">Act</span>
                 {actionItems.length > 0 && (
@@ -304,35 +357,91 @@ const TranscriptionResult: React.FC<TranscriptionResultProps> = ({
               <ScrollArea className="h-full">
                 <div className="space-y-6">
                   <div className="flex items-center gap-2 mb-4">
-                    <Zap className="h-5 w-5 text-accent" />
-                    <h3 className="text-lg font-semibold text-foreground">Action Items & Key Points</h3>
+                    <Target className="h-5 w-5 text-accent" />
+                    <h3 className="text-lg font-semibold text-foreground">Smart Action Analysis</h3>
                   </div>
                   
                   {actionItems.length === 0 ? (
                     <div className="text-center py-8">
                       <div className="text-4xl mb-4">🔍</div>
                       <p className="text-muted-foreground">No specific action items detected in this transcription.</p>
-                      <p className="text-sm text-muted-foreground mt-2">Action detection looks for words like "task", "action", "need to", "should", etc.</p>
+                      <p className="text-sm text-muted-foreground mt-2">The AI will analyze content for tasks, decisions, commitments, and next steps.</p>
                     </div>
                   ) : (
-                    <div className="space-y-4">
+                    <div className="space-y-6">
+                      {/* Action Items */}
                       <div className="bg-accent/10 border border-accent/20 rounded-lg p-4">
-                        <h4 className="text-md font-medium text-accent mb-3">
-                          Detected Actions ({actionItems.length})
+                        <h4 className="text-md font-medium text-accent mb-3 flex items-center gap-2">
+                          <CheckCircle className="h-4 w-4" />
+                          Detected Action Items ({actionItems.length})
                         </h4>
-                        <ul className="space-y-3">
+                        <div className="space-y-3">
                           {actionItems.map((action, index) => (
-                            <li key={index} className="flex items-start text-sm">
-                              <span className="text-accent mr-3 mt-1 font-bold">•</span>
-                              <span className="text-foreground leading-relaxed">{action}</span>
-                            </li>
+                            <div key={index} className="flex items-start gap-3 p-3 bg-background/50 rounded-lg border border-accent/10">
+                              <span className="text-accent mt-1 font-bold text-lg">•</span>
+                              <div className="flex-1">
+                                <p className="text-sm text-foreground leading-relaxed">{action.text}</p>
+                                <div className="flex items-center gap-2 mt-2">
+                                  <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded">
+                                    {action.timestamp}
+                                  </span>
+                                  {action.speaker && (
+                                    <span className="text-xs text-accent bg-accent/10 px-2 py-1 rounded">
+                                      {action.speaker}
+                                    </span>
+                                  )}
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => seekToTimestamp(transcriptionLines[action.index].startTime)}
+                                    className="h-6 text-xs text-primary hover:bg-primary/10"
+                                  >
+                                    Jump to
+                                  </Button>
+                                </div>
+                              </div>
+                            </div>
                           ))}
-                        </ul>
+                        </div>
                       </div>
+
+                      {/* Meeting Insights */}
+                      {(meetingInsights.decisions.length > 0 || meetingInsights.commitments.length > 0) && (
+                        <div className="bg-primary/10 border border-primary/20 rounded-lg p-4">
+                          <h4 className="text-md font-medium text-primary mb-3">Meeting Insights</h4>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {meetingInsights.decisions.length > 0 && (
+                              <div>
+                                <h5 className="text-sm font-medium text-foreground mb-2">Decisions Made</h5>
+                                <ul className="space-y-1">
+                                  {meetingInsights.decisions.slice(0, 3).map((decision, index) => (
+                                    <li key={index} className="text-xs text-muted-foreground">
+                                      • {decision.substring(0, 100)}...
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                            {meetingInsights.commitments.length > 0 && (
+                              <div>
+                                <h5 className="text-sm font-medium text-foreground mb-2">Commitments</h5>
+                                <ul className="space-y-1">
+                                  {meetingInsights.commitments.slice(0, 3).map((commitment, index) => (
+                                    <li key={index} className="text-xs text-muted-foreground">
+                                      • {commitment.substring(0, 100)}...
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
                       
-                      <div className="bg-primary/10 border border-primary/20 rounded-lg p-4">
-                        <h4 className="text-md font-medium text-primary mb-3">Quick Stats</h4>
-                        <div className="grid grid-cols-2 gap-4 text-sm">
+                      {/* Quick Stats */}
+                      <div className="bg-secondary/10 border border-secondary/20 rounded-lg p-4">
+                        <h4 className="text-md font-medium text-secondary mb-3">Analysis Summary</h4>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                           <div>
                             <span className="text-muted-foreground">Total segments:</span>
                             <span className="text-foreground font-medium ml-2">{transcriptionLines.length}</span>

@@ -24,7 +24,16 @@ export const useAIAnalysis = () => {
 
       const model = 'gemini-2.0-flash-lite';
 
-      const prompt = `Analyze this transcript and provide structured insights:\n\n${transcriptText}`;
+      const prompt = `Analyze this transcript segment and provide detailed insights:
+
+"${transcriptText}"
+
+Please provide:
+1. A concise 2-3 sentence summary
+2. Detailed explanation of key points, context, and important insights
+3. Specific action items, tasks, decisions, or next steps mentioned or implied
+
+Focus on practical, actionable insights. If this appears to be from a meeting, interview, or educational content, highlight the most important takeaways and any commitments or decisions made.`;
 
       const response = await ai.models.generateContent({
         model,
@@ -36,18 +45,18 @@ export const useAIAnalysis = () => {
             properties: {
               summary: {
                 type: 'string',
-                description: 'Concise 2-3 sentence summary of the transcript'
+                description: 'Concise 2-3 sentence summary of the transcript segment'
               },
               explanation: {
                 type: 'string', 
-                description: 'Detailed explanation of key points, context, and insights'
+                description: 'Detailed explanation of key points, context, insights, and significance'
               },
               actions: {
                 type: 'array',
                 items: {
                   type: 'string'
                 },
-                description: 'Bullet points of what actions or tasks are mentioned in the content'
+                description: 'Specific action items, tasks, decisions, commitments, or next steps mentioned or implied'
               }
             },
             required: ['summary', 'explanation', 'actions'],
@@ -57,6 +66,12 @@ export const useAIAnalysis = () => {
       });
 
       const result = JSON.parse(response.text || '{}') as AIAnalysis;
+      
+      // Ensure we have meaningful actions
+      if (result.actions.length === 0) {
+        result.actions = ['No specific actions identified in this segment'];
+      }
+      
       setAnalysis(result);
       return result;
     } catch (error) {
