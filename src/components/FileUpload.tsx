@@ -12,6 +12,7 @@ interface FileUploadProps {
 const FileUpload: React.FC<FileUploadProps> = ({ file, setFile }) => {
   const { maxFileSize, maxDuration } = useSettings();
   
+  // Convert settings to the units we need for display
   const maxFileSizeMB = maxFileSize;
   const maxDurationMinutes = Math.round(maxDuration / 60);
   
@@ -27,7 +28,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ file, setFile }) => {
       'audio/*': ['.mp3', '.wav', '.m4a', '.aac', '.ogg', '.flac', '.aiff'],
       'video/*': ['.mp4', '.mov', '.avi', '.wmv', '.mpeg', '.mpg', '.webm', '.3gpp', '.flv']
     },
-    maxSize: maxFileSize * 1024 * 1024,
+    maxSize: maxFileSize * 1024 * 1024, // Convert MB to bytes
     multiple: false
   });
 
@@ -50,14 +51,14 @@ const FileUpload: React.FC<FileUploadProps> = ({ file, setFile }) => {
       {!file ? (
         <div
           {...getRootProps()}
-          className={`border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-all duration-200 ${
+          className={`border-2 border-dashed rounded-lg p-6 sm:p-8 text-center cursor-pointer transition-all duration-200 ${
             isDragActive
               ? 'border-green-500 bg-green-50'
               : 'border-green-200 hover:border-green-400 hover:bg-green-50'
           }`}
         >
           <input {...getInputProps()} />
-          <Upload className="h-6 w-6 mx-auto text-green-500" />
+          <Upload className="h-8 w-8 sm:h-10 sm:w-10 mx-auto text-green-500" />
           <p className="mt-2 text-sm font-medium text-gray-600">
             {isDragActive
               ? "Drop your file here..."
@@ -65,7 +66,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ file, setFile }) => {
             }
           </p>
           <p className="mt-1 text-xs text-gray-500">
-            Audio: MP3, WAV, FLAC, AAC, OGG, AIFF
+            Audio: MP3, WAV, FLAC, AAC, OGG, AIFF, M4A
           </p>
           <p className="text-xs text-gray-500">
             Video: MP4, MOV, AVI, WMV, MPEG, WEBM, FLV
@@ -75,7 +76,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ file, setFile }) => {
           </p>
         </div>
       ) : (
-        <div className="border border-green-200 rounded-lg p-3 bg-green-50">
+        <div className="border border-green-200 rounded-lg p-4 bg-green-50">
           <div className="flex items-center">
             {getFileIcon()}
             <div className="ml-3 flex-1 truncate">

@@ -5,7 +5,7 @@ import { Switch } from '@/components/ui/switch';
 import { Slider } from '@/components/ui/slider';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Palette, Volume2, Eye, HardDrive } from 'lucide-react';
+import { Palette, Volume2, Eye, Zap, HardDrive, Clock } from 'lucide-react';
 import { useSettings } from '../contexts/SettingsContext';
 
 const TranscriptionSettings: React.FC = () => {
@@ -28,12 +28,12 @@ const TranscriptionSettings: React.FC = () => {
         <CardHeader className="pb-2">
           <CardTitle className="text-sm flex items-center gap-2 text-orange-700">
             <HardDrive className="h-4 w-4" />
-            File Limits
+            Upload Limits
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label className="text-sm text-foreground">Maximum File Size ({maxFileSize}MB)</Label>
+            <Label className="text-sm text-foreground">Max File Size ({maxFileSize}MB)</Label>
             <Slider
               value={[maxFileSize]}
               onValueChange={(value) => setMaxFileSize(value[0])}
@@ -42,10 +42,11 @@ const TranscriptionSettings: React.FC = () => {
               step={10}
               className="w-full"
             />
+            <p className="text-xs text-muted-foreground">File size limit for audio and video uploads</p>
           </div>
           
           <div className="space-y-2">
-            <Label className="text-sm text-foreground">Maximum Duration ({Math.round(maxDuration / 60)} minutes)</Label>
+            <Label className="text-sm text-foreground">Max Duration ({Math.round(maxDuration / 60)} minutes)</Label>
             <Slider
               value={[maxDuration]}
               onValueChange={(value) => setMaxDuration(value[0])}
@@ -54,6 +55,7 @@ const TranscriptionSettings: React.FC = () => {
               step={60}
               className="w-full"
             />
+            <p className="text-xs text-muted-foreground">Maximum duration for audio and video files</p>
           </div>
         </CardContent>
       </Card>
